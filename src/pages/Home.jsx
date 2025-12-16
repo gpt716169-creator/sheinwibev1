@@ -39,7 +39,7 @@ export default function Home({ user, dbUser, setActiveTab }) {
     setLoadingOrder(true);
     try {
         // Используем ID юзера или тестовый, если в браузере
-        const tgId = user?.id || 1332986231;
+        const tgId = user?.id;
         
         const res = await fetch(`https://proshein.com/webhook/get-orders?tg_id=${tgId}`);
         
@@ -90,7 +90,7 @@ export default function Home({ user, dbUser, setActiveTab }) {
 
     try {
         // 2. Отправляем запрос на твой n8n вебхук
-        const tgId = user?.id || 1332986231;
+        const tgId = user?.id;
 
         const res = await fetch('https://proshein.com/webhook/parse-shein', {
             method: 'POST',
