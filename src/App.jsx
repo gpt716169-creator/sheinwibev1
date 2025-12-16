@@ -12,34 +12,22 @@ function App() {
   const [dbUser, setDbUser] = useState(null);
 
   useEffect(() => {
-    // Безопасное получение объекта Telegram WebApp
     const tg = window.Telegram?.WebApp;
-    
     if (tg) {
       tg.expand();
       tg.enableClosingConfirmation();
       
-      // Пытаемся получить данные пользователя
-      const user = tg.initDataUnsafe?.user;
-      
-      if (user) {
-          setTgUser(user);
-          // Инициализируем пользователя в БД (получаем баллы и статус)
-          initUserInDB(user);
-      } else {
-          // Логика для разработки в браузере (чтобы не было белого экрана)
-          // В продакшене лучше закомментировать или оставить как fallback для тестов
-          const devUser = { 
-            id: 1332986231, 
-            first_name: "Konstantin (Dev)", 
-            username: "browser_test" 
-          };
-          console.log("App: Запущен вне Telegram, использую тестового юзера");
-          setTgUser(devUser);
-          initUserInDB(devUser);
-      }
+      const user = tg.initDataUnsafe?.user || { 
+        id: 1332986231, 
+        first_name: "Konstantin (Dev)", 
+        username: "browser_test" 
+      };
+      setTgUser(user);
 
-      // Хак для клавиатуры на Android (чтобы не перекрывала инпуты)
+      // Сразу загружаем данные из базы при старте
+      initUserInDB(user);
+      
+      // Хак для клавиатуры
       const handleFocus = () => document.body.classList.add('keyboard-open');
       const handleBlur = () => document.body.classList.remove('keyboard-open');
       const inputs = document.querySelectorAll('input, textarea');
@@ -63,25 +51,23 @@ function App() {
         });
         const json = await res.json();
         if (json.status === 'success') {
+            // Сохраняем полные данные о юзере (включая баллы)
             setDbUser(json.data);
         }
     } catch (e) {
-        console.error("App: Ошибка инициализации юзера:", e);
+        console.error("Ошибка авторизации:", e);
     }
   };
 
   return (
-    <div className="min-h-screen bg-[#020617] text-white overflow-hidden font-display selection:bg-primary/30">
-      {/* Фоновый градиент */}
-      <div className="fixed inset-0 pointer-events-none bg-gradient-to-b from-[#0f172a] to-[#020617] z-0"></div>
+    <div className="min-h-screen bg-luxury-gradient text-white overflow-hidden font-display">
+      <div className="fixed inset-0 pointer-events-none bg-luxury-gradient z-0"></div>
 
-      <div className="relative z-10 pb-24 max-w-md mx-auto h-screen flex flex-col">
-        {/* Рендеринг активной страницы */}
-        <div className="flex-1 overflow-y-auto hide-scrollbar">
-            {activeTab === 'home' && <Home user={tgUser} dbUser={dbUser} setActiveTab={setActiveTab} />}
-            {activeTab === 'cart' && <Cart user={tgUser} dbUser={dbUser} setActiveTab={setActiveTab} />}
-            {activeTab === 'profile' && <Profile user={tgUser} dbUser={dbUser} />}
-        </div>
+      <div className="relative z-10 pb-24">
+        {/* Передаем dbUser во все компоненты, чтобы везде были актуальные баллы */}
+        {activeTab === 'home' && <Home user={tgUser} dbUser={dbUser} setActiveTab={setActiveTab} />}
+        {activeTab === 'cart' && <Cart user={tgUser} dbUser={dbUser} setActiveTab={setActiveTab} />}
+        {activeTab === 'profile' && <Profile user={tgUser} dbUser={dbUser} />}
       </div>
 
       <BottomNav activeTab={activeTab} setActiveTab={setActiveTab} />
