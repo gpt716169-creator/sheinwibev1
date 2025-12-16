@@ -227,9 +227,11 @@ export default function Cart({ user, dbUser, setActiveTab }) {
   };
 
   return (
-    <div className="flex flex-col h-full animate-fade-in pb-24">
+    // FIX: Изменили h-full на h-screen и добавили overflow-y-auto сюда, чтобы скроллилась вся страница
+    <div className="flex flex-col h-screen overflow-y-auto animate-fade-in pb-32">
+      
       {/* Header */}
-      <div className="relative z-10 flex items-center justify-between p-6 pt-8 pb-4">
+      <div className="relative z-10 flex items-center justify-between p-6 pt-8 pb-4 shrink-0">
         <div className="w-10"></div>
         <h1 className="text-white text-lg font-medium tracking-wide">Корзина</h1>
         <div className="w-10 flex items-center justify-center">
@@ -238,7 +240,8 @@ export default function Cart({ user, dbUser, setActiveTab }) {
       </div>
 
       {/* Items List */}
-      <div className="px-6 space-y-4 relative z-10 flex-1 overflow-y-auto min-h-[200px]">
+      {/* FIX: Убрали flex-1 и overflow-y-auto, теперь это просто список в потоке */}
+      <div className="px-6 space-y-4 relative z-10 min-h-[200px]">
         {loading ? (
             <div className="animate-pulse flex gap-4 p-4 border border-white/5 rounded-2xl">
                  <div className="bg-white/10 w-24 h-24 rounded-xl"></div>
@@ -310,7 +313,8 @@ export default function Cart({ user, dbUser, setActiveTab }) {
       </div>
 
       {/* Footer Controls */}
-      <div className="px-6 mt-4 mb-6 relative z-10">
+      {/* FIX: Этот блок теперь идет просто следом за товарами, он не прилипает к низу экрана */}
+      <div className="px-6 mt-4 relative z-10 shrink-0">
           <div className="flex gap-3 mb-4">
               <button onClick={() => setIsCouponsOpen(true)} className={`flex-1 bg-dark-card border rounded-xl h-12 flex items-center justify-center gap-2 text-sm transition-colors ${currentDiscount > 0 ? 'border-primary text-primary' : 'border-white/10 text-white hover:bg-white/5'}`}>
                   <span className="material-symbols-outlined text-[18px]">sell</span>
