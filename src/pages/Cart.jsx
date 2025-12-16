@@ -21,19 +21,18 @@ export default function Cart({ user, dbUser, setActiveTab }) {
   const [selectedSize, setSelectedSize] = useState(null);
   const [selectedColor, setSelectedColor] = useState(null);
 
-  // Состояние формы заказа (Заполняем данными из профиля)
+  // Состояние формы заказа
   const [checkoutForm, setCheckoutForm] = useState({
     name: dbUser?.name || user?.first_name || '',
     phone: dbUser?.phone || '',
     email: dbUser?.email || '',
-    address: dbUser?.address || '', // Если в базе есть адрес
+    address: dbUser?.address || '', 
     deliveryMethod: 'ПВЗ (5Post)',
     isDeliveryToggle: false,
     agreed: false,
     customsAgreed: false
   });
 
-  // Обновляем форму, если dbUser загрузился позже
   useEffect(() => {
     if (dbUser) {
         setCheckoutForm(prev => ({
@@ -53,18 +52,11 @@ export default function Cart({ user, dbUser, setActiveTab }) {
       const res = await fetch(`https://proshein.com/webhook/get-cart?tg_id=${tgId}`);
       const text = await res.text();
       
-      if (!text) {
-          setItems([]);
-          return;
-      }
-      
+      if (!text) { setItems([]); return; }
       const json = JSON.parse(text);
       let loadedItems = json.items || (Array.isArray(json) ? json : []);
-      
-      // Гарантируем количество
       loadedItems = loadedItems.map(i => ({ ...i, quantity: i.quantity || 1 }));
       setItems(loadedItems);
-
     } catch (e) {
       console.error(e);
     } finally {
@@ -72,9 +64,7 @@ export default function Cart({ user, dbUser, setActiveTab }) {
     }
   };
 
-  useEffect(() => {
-    loadCart();
-  }, [user]);
+  useEffect(() => { loadCart(); }, [user]);
 
   // --- 2. МАТЕМАТИКА ---
   const subtotal = useMemo(() => {
@@ -85,7 +75,6 @@ export default function Cart({ user, dbUser, setActiveTab }) {
   const finalTotal = Math.max(0, subtotal - currentDiscount - pointsToUse);
 
   // --- 3. ДЕЙСТВИЯ ---
-  
   const handleQuantity = (id, delta) => {
     setItems(prev => prev.map(item => {
         if (item.id === id) {
@@ -94,39 +83,29 @@ export default function Cart({ user, dbUser, setActiveTab }) {
         }
         return item;
     }));
-    // Здесь можно добавить запрос к webhook/update-cart-item
   };
 
   const handleDeleteItem = async (e, id) => {
       e.stopPropagation(); 
-      
       if(!window.confirm('Удалить товар из корзины?')) return;
-
-      // Оптимистичное удаление
       setItems(prev => prev.filter(i => i.id !== id));
-
       try {
-          // Реальное удаление
           await fetch('https://proshein.com/webhook/delete-item', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ id: id, tg_id: user?.id })
           }); 
           window.Telegram?.WebApp?.HapticFeedback.notificationOccurred('success');
-      } catch (err) {
-          console.error(err);
-      }
+      } catch (err) { console.error(err); }
   };
 
   const handleUseMaxPoints = () => {
       if (subtotal === 0) return;
-      // Лимит списания 50%
       const maxAllowed = Math.floor(subtotal * 0.5);
       const toWrite = Math.min(userPointsBalance, maxAllowed, Math.max(0, subtotal - currentDiscount));
       setPointsInput(toWrite.toString());
   };
 
-  // Применение купона
   const handleApplyCoupon = (discount, minOrder, code) => {
       if (subtotal < minOrder) {
           window.Telegram?.WebApp?.showAlert(`Купон от ${minOrder}₽`);
@@ -137,17 +116,13 @@ export default function Cart({ user, dbUser, setActiveTab }) {
       window.Telegram?.WebApp?.HapticFeedback.notificationOccurred('success');
   };
 
-  // Ручной ввод промокода (Пока локальная проверка, позже заменить на fetch)
   const handleManualPromo = () => {
       const code = promoCodeInput.trim().toUpperCase();
       if (!code) return;
-
-      if (code === 'START500') {
-          handleApplyCoupon(500, 5000, code);
-      } else if (code === 'SHEIN100') {
-          handleApplyCoupon(100, 1000, code);
-      } else {
-          window.Telegram?.WebApp?.showAlert('Промокод не найден или условия не выполнены');
+      if (code === 'START500') handleApplyCoupon(500, 5000, code);
+      else if (code === 'SHEIN100') handleApplyCoupon(100, 1000, code);
+      else {
+          window.Telegram?.WebApp?.showAlert('Промокод не найден');
           window.Telegram?.WebApp?.HapticFeedback.notificationOccurred('error');
       }
       setPromoCodeInput('');
@@ -168,7 +143,6 @@ export default function Cart({ user, dbUser, setActiveTab }) {
       }
 
       window.Telegram?.WebApp?.MainButton.showProgress();
-      
       try {
           const res = await fetch('https://proshein.com/webhook/create-order', {
               method: 'POST',
@@ -187,16 +161,13 @@ export default function Cart({ user, dbUser, setActiveTab }) {
                   items: items
               })
           });
-          
           const json = await res.json();
           if (json.status === 'success') {
               window.Telegram?.WebApp?.showAlert(`Заказ #${json.order_id} создан!`);
               setIsCheckoutOpen(false);
               setItems([]); 
               setActiveTab('home'); 
-          } else {
-              throw new Error(json.message);
-          }
+          } else { throw new Error(json.message); }
       } catch (e) {
           window.Telegram?.WebApp?.showAlert('Ошибка создания заказа');
       } finally {
@@ -204,7 +175,6 @@ export default function Cart({ user, dbUser, setActiveTab }) {
       }
   };
 
-  // Редактирование товара
   const openEditModal = (item) => {
       setEditingItem(item);
       setSelectedSize(item.size === 'NOT_SELECTED' ? null : item.size);
@@ -217,21 +187,19 @@ export default function Cart({ user, dbUser, setActiveTab }) {
           return;
       }
       setItems(prev => prev.map(i => {
-          if (i.id === editingItem.id) {
-              return { ...i, size: selectedSize, color: selectedColor };
-          }
+          if (i.id === editingItem.id) return { ...i, size: selectedSize, color: selectedColor };
           return i;
       }));
       setEditingItem(null);
-      // Здесь позже добавим fetch('webhook/update-cart-item')
   };
 
   return (
-    // FIX: Изменили h-full на h-screen и добавили overflow-y-auto сюда, чтобы скроллилась вся страница
-    <div className="flex flex-col h-screen overflow-y-auto animate-fade-in pb-32">
+    // ГЛАВНОЕ ИЗМЕНЕНИЕ: min-h-screen вместо h-screen. 
+    // pb-36 дает огромный отступ внизу, чтобы кнопка "Оплатить" не перекрывалась навигацией
+    <div className="flex flex-col min-h-screen bg-transparent animate-fade-in pb-36">
       
       {/* Header */}
-      <div className="relative z-10 flex items-center justify-between p-6 pt-8 pb-4 shrink-0">
+      <div className="flex items-center justify-between p-6 pt-8 pb-4">
         <div className="w-10"></div>
         <h1 className="text-white text-lg font-medium tracking-wide">Корзина</h1>
         <div className="w-10 flex items-center justify-center">
@@ -239,15 +207,14 @@ export default function Cart({ user, dbUser, setActiveTab }) {
         </div>
       </div>
 
-      {/* Items List */}
-      {/* FIX: Убрали flex-1 и overflow-y-auto, теперь это просто список в потоке */}
-      <div className="px-6 space-y-4 relative z-10 min-h-[200px]">
+      {/* Items List - ТЕПЕРЬ ОН ПРОСТО РАСТЯГИВАЕТСЯ ВНИЗ */}
+      <div className="px-6 space-y-4">
         {loading ? (
             <div className="animate-pulse flex gap-4 p-4 border border-white/5 rounded-2xl">
                  <div className="bg-white/10 w-24 h-24 rounded-xl"></div>
                  <div className="flex-1 space-y-2 py-2">
                      <div className="h-4 bg-white/10 rounded w-3/4"></div>
-                     <div class="h-3 bg-white/10 rounded w-1/2"></div>
+                     <div className="h-3 bg-white/10 rounded w-1/2"></div>
                  </div>
             </div>
         ) : items.length === 0 ? (
@@ -262,7 +229,7 @@ export default function Cart({ user, dbUser, setActiveTab }) {
                     <div 
                         key={item.id} 
                         onClick={() => openEditModal(item)}
-                        className={`relative group p-3 rounded-2xl bg-dark-card/80 border backdrop-blur-sm overflow-hidden transition-all duration-300 hover:bg-dark-card mb-3 cursor-pointer active:scale-[0.99] ${isWarning ? 'border-red-500/30 bg-red-900/5' : 'border-white/5'}`}
+                        className={`relative group p-3 rounded-2xl bg-dark-card/80 border backdrop-blur-sm overflow-hidden transition-all duration-300 hover:bg-dark-card cursor-pointer active:scale-[0.99] ${isWarning ? 'border-red-500/30 bg-red-900/5' : 'border-white/5'}`}
                     >
                         {/* Кнопка удаления */}
                         <button 
@@ -312,9 +279,8 @@ export default function Cart({ user, dbUser, setActiveTab }) {
         )}
       </div>
 
-      {/* Footer Controls */}
-      {/* FIX: Этот блок теперь идет просто следом за товарами, он не прилипает к низу экрана */}
-      <div className="px-6 mt-4 relative z-10 shrink-0">
+      {/* Footer Controls - ТЕПЕРЬ ОНИ ИДУТ СЛЕДОМ ЗА СПИСКОМ */}
+      <div className="px-6 mt-6">
           <div className="flex gap-3 mb-4">
               <button onClick={() => setIsCouponsOpen(true)} className={`flex-1 bg-dark-card border rounded-xl h-12 flex items-center justify-center gap-2 text-sm transition-colors ${currentDiscount > 0 ? 'border-primary text-primary' : 'border-white/10 text-white hover:bg-white/5'}`}>
                   <span className="material-symbols-outlined text-[18px]">sell</span>
@@ -332,7 +298,6 @@ export default function Cart({ user, dbUser, setActiveTab }) {
               <button onClick={handleUseMaxPoints} className="absolute right-4 top-1/2 -translate-y-1/2 text-primary text-xs font-bold uppercase cursor-pointer hover:opacity-80">МАКС</button>
           </div>
 
-          {/* Видео про Таможню */}
           <div onClick={() => window.Telegram?.WebApp?.openLink('https://youtube.com/shorts/placeholder')} className="mb-4 bg-blue-500/10 border border-blue-500/20 rounded-xl p-3 flex items-center gap-3 cursor-pointer hover:bg-blue-500/20 transition-colors">
               <div className="w-8 h-8 rounded-full bg-blue-500/20 flex items-center justify-center text-blue-400">
                    <span className="material-symbols-outlined text-[18px]">play_circle</span>
@@ -386,8 +351,7 @@ export default function Cart({ user, dbUser, setActiveTab }) {
       </div>
 
       {/* --- MODALS --- */}
-      
-      {/* 1. Checkout Overlay */}
+      {/* ОФОРМЛЕНИЕ ЗАКАЗА */}
       {isCheckoutOpen && (
           <div className="fixed inset-0 z-50 bg-[#101622] flex flex-col animate-fade-in">
              <div className="flex items-center justify-between p-6 pt-8 border-b border-white/5 bg-[#101622]/95 backdrop-blur-md">
@@ -401,38 +365,30 @@ export default function Cart({ user, dbUser, setActiveTab }) {
                  <div className="flex flex-col gap-4 bg-surface-dark/50 p-5 rounded-2xl border border-white/5">
                      <div className="space-y-1.5">
                          <label className="text-[11px] font-bold uppercase tracking-wider text-white/50 ml-1">ФИО</label>
-                         <input 
-                            name="name"               // <-- Добавлено
-                            autoComplete="name"       // <-- Добавлено
-                            className="custom-input w-full rounded-xl px-4 py-3 text-sm" 
-                            value={checkoutForm.name} 
-                            onChange={e => setCheckoutForm({...checkoutForm, name: e.target.value})} 
-                            placeholder="Иванов Иван" 
-                         />
+                         <input name="name" autoComplete="name" className="custom-input w-full rounded-xl px-4 py-3 text-sm" value={checkoutForm.name} onChange={e => setCheckoutForm({...checkoutForm, name: e.target.value})} placeholder="Иванов Иван" />
                      </div>
                      <div className="space-y-1.5">
                          <label className="text-[11px] font-bold uppercase tracking-wider text-white/50 ml-1">Телефон</label>
-                         <input 
-                            name="phone"              // <-- Добавлено
-                            autoComplete="tel"        // <-- Добавлено
-                            className="custom-input w-full rounded-xl px-4 py-3 text-sm" 
-                            type="tel" 
-                            value={checkoutForm.phone} 
-                            onChange={e => setCheckoutForm({...checkoutForm, phone: e.target.value})} 
-                            placeholder="+7 999 ..." 
-                         />
+                         <input name="phone" autoComplete="tel" className="custom-input w-full rounded-xl px-4 py-3 text-sm" type="tel" value={checkoutForm.phone} onChange={e => setCheckoutForm({...checkoutForm, phone: e.target.value})} placeholder="+7 999 ..." />
                      </div>
                      <div className="space-y-1.5">
                          <label className="text-[11px] font-bold uppercase tracking-wider text-white/50 ml-1">Email</label>
-                         <input 
-                            name="email"              // <-- Добавлено
-                            autoComplete="email"      // <-- Добавлено
-                            className="custom-input w-full rounded-xl px-4 py-3 text-sm" 
-                            type="email" 
-                            value={checkoutForm.email} 
-                            onChange={e => setCheckoutForm({...checkoutForm, email: e.target.value})} 
-                            placeholder="mail@example.com" 
-                         />
+                         <input name="email" autoComplete="email" className="custom-input w-full rounded-xl px-4 py-3 text-sm" type="email" value={checkoutForm.email} onChange={e => setCheckoutForm({...checkoutForm, email: e.target.value})} placeholder="mail@example.com" />
+                     </div>
+                     <div className="h-px bg-white/5 my-2"></div>
+                     <div className="space-y-3">
+                         <label className="text-[11px] font-bold uppercase tracking-wider text-white/50 ml-1">Доставка</label>
+                         <label className="flex items-center gap-3 p-3 rounded-xl border border-white/10 bg-white/5 cursor-pointer">
+                             <div className="relative flex items-center">
+                                 <input type="checkbox" className="peer sr-only" checked={checkoutForm.isDeliveryToggle} onChange={e => setCheckoutForm({...checkoutForm, isDeliveryToggle: e.target.checked, deliveryMethod: e.target.checked ? 'Почта РФ' : 'ПВЗ (5Post)'})} />
+                                 <div className="w-11 h-6 bg-gray-700 rounded-full peer peer-checked:bg-primary peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all"></div>
+                             </div>
+                             <span className="text-sm font-medium text-white">{checkoutForm.isDeliveryToggle ? 'Почта РФ' : 'ПВЗ (5Post)'}</span>
+                         </label>
+                         <div>
+                             <label className="text-[11px] font-bold uppercase tracking-wider text-primary ml-1">Адрес</label>
+                             <input className="custom-input w-full rounded-xl px-4 py-3 text-sm" value={checkoutForm.address} onChange={e => setCheckoutForm({...checkoutForm, address: e.target.value})} placeholder="Город, Улица, Дом" />
+                         </div>
                      </div>
                      
                      {/* Галочки согласия */}
@@ -457,7 +413,7 @@ export default function Cart({ user, dbUser, setActiveTab }) {
           </div>
       )}
 
-      {/* 2. Options Overlay (Размер/Цвет) */}
+      {/* ВЫБОР РАЗМЕРА И ЦВЕТА */}
       {editingItem && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center px-4 animate-fade-in">
               <div className="absolute inset-0 bg-black/70 backdrop-blur-md" onClick={() => setEditingItem(null)}></div>
@@ -479,31 +435,6 @@ export default function Cart({ user, dbUser, setActiveTab }) {
                               ))}
                           </div>
                       </div>
-
-                      {/* Цвета */}
-                      <div className="mb-6">
-                          <h4 className="text-[10px] uppercase tracking-[0.25em] text-white/40 font-semibold mb-2.5">Цвет</h4>
-                          <div className="flex items-center gap-3 flex-wrap pl-1">
-                               {(() => {
-                                   const baseColors = [
-                                       {name: editingItem.color || "As shown", hex: "#fff", border: true}, 
-                                       {name: "Black", hex: "#000"}, {name: "White", hex: "#fff", border: true},
-                                       {name: "Green", hex: "#10b981"}, {name: "Blue", hex: "#3b82f6"}, {name: "Red", hex: "#ef4444"}
-                                   ];
-                                   const uniqueColors = [...new Map(baseColors.map(c => [c.name, c])).values()];
-                                   
-                                   return uniqueColors.map(col => (
-                                       <button 
-                                          key={col.name} 
-                                          onClick={() => setSelectedColor(col.name)}
-                                          className={`w-8 h-8 rounded-full transition-transform mb-2 ${selectedColor === col.name ? 'scale-125 ring-2 ring-primary ring-offset-2 ring-offset-[#151c28]' : 'hover:scale-110 ring-1 ring-white/10'}`}
-                                          style={{backgroundColor: col.hex, border: (col.hex === '#fff' || col.border) ? '1px solid rgba(255,255,255,0.3)' : 'none'}}
-                                       />
-                                   ));
-                               })()}
-                          </div>
-                      </div>
-
                       <div className="mt-auto pt-4 border-t border-white/5">
                           <button onClick={saveEditedItem} className="bg-primary text-[#102216] px-6 py-3 rounded-xl text-xs font-bold uppercase tracking-widest shadow-lg shadow-primary/20 w-full">Сохранить</button>
                       </div>
@@ -512,7 +443,7 @@ export default function Cart({ user, dbUser, setActiveTab }) {
           </div>
       )}
 
-      {/* 3. Coupons Overlay */}
+      {/* КУПОНЫ */}
       {isCouponsOpen && (
         <div className="fixed inset-0 z-50 bg-[#101622] flex flex-col animate-fade-in">
            <div className="flex items-center justify-between p-6 pt-8 border-b border-white/5 bg-[#101622]/95 backdrop-blur-md">
@@ -524,35 +455,23 @@ export default function Cart({ user, dbUser, setActiveTab }) {
            </div>
            
            <div className="flex-1 overflow-y-auto p-6 space-y-6">
-                {/* Ручной ввод */}
                 <div>
                     <p className="text-white/60 text-sm mb-3">Введите промокод</p>
                     <div className="flex gap-2">
-                        <input 
-                            value={promoCodeInput}
-                            onChange={(e) => setPromoCodeInput(e.target.value)}
-                            className="custom-input flex-1 h-12 rounded-xl px-4 text-sm uppercase" 
-                            placeholder="CODE2025" 
-                        />
+                        <input value={promoCodeInput} onChange={(e) => setPromoCodeInput(e.target.value)} className="custom-input flex-1 h-12 rounded-xl px-4 text-sm uppercase" placeholder="CODE2025" />
                         <button onClick={handleManualPromo} className="bg-primary text-[#102216] font-bold px-6 rounded-xl hover:opacity-90 transition-opacity">ОК</button>
                     </div>
                 </div>
-
                 <div>
                     <h3 className="text-white font-bold mb-3">Доступные вам:</h3>
                     <div onClick={() => handleApplyCoupon(100, 1000, 'SHEINWIBE100')} className="bg-surface-dark border border-dashed border-white/20 rounded-xl p-4 flex justify-between items-center cursor-pointer hover:bg-white/5 mb-3">
                         <div><p className="text-primary font-bold text-lg">100 ₽ OFF</p><p className="text-white/50 text-xs">При заказе от 1000 ₽</p></div>
                         <button className="bg-primary/10 text-primary px-4 py-2 rounded-lg text-xs font-bold">Применить</button>
                     </div>
-                    <div onClick={() => handleApplyCoupon(500, 5000, 'VIP500')} className="bg-surface-dark border border-dashed border-white/20 rounded-xl p-4 flex justify-between items-center cursor-pointer hover:bg-white/5">
-                        <div><p className="text-gold-accent font-bold text-lg">500 ₽ OFF</p><p className="text-white/50 text-xs">VIP: Заказ от 5000 ₽</p></div>
-                        <button className="bg-gold-accent/10 text-gold-accent px-4 py-2 rounded-lg text-xs font-bold">Применить</button>
-                    </div>
                 </div>
            </div>
         </div>
       )}
-
     </div>
   );
 }
