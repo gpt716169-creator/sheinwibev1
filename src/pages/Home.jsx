@@ -40,14 +40,12 @@ export default function Home({ user, dbUser, setActiveTab }) {
     try {
         // Используем ID юзера или тестовый, если в браузере
         const tgId = user?.id || 1332986231;
-        console.log("Home: Загружаю заказ для ID:", tgId);
-
+        
         const res = await fetch(`https://proshein.com/webhook/get-orders?tg_id=${tgId}`);
         
         if (!res.ok) throw new Error(`HTTP Error: ${res.status}`);
         
         const text = await res.text();
-        console.log("Home: Ответ сервера:", text.substring(0, 100) + "..."); // Логируем начало ответа
 
         if (text) {
             const json = JSON.parse(text);
@@ -57,8 +55,6 @@ export default function Home({ user, dbUser, setActiveTab }) {
             if (Array.isArray(json)) list = json;
             else if (json.items && Array.isArray(json.items)) list = json.items;
             else if (json.orders && Array.isArray(json.orders)) list = json.orders;
-
-            console.log("Home: Найдено заказов:", list.length);
 
             if (list.length > 0) {
                 setActiveOrder(list[0]); // Берем самый первый (свежий) заказ
@@ -79,18 +75,55 @@ export default function Home({ user, dbUser, setActiveTab }) {
     } catch (e) { window.Telegram?.WebApp?.showAlert('Не удалось вставить'); }
   };
 
-  const handleProcessLink = () => {
+  // --- ИНТЕГРАЦИЯ ВЕБХУКА ПАРСИНГА ---
+  const handleProcessLink = async () => {
     if (!link) {
        window.Telegram?.WebApp?.showAlert("Сначала вставьте ссылку!");
        return;
     }
-    window.Telegram?.WebApp?.MainButton.setText("⏳ Анализируем...");
-    window.Telegram?.WebApp?.MainButton.show();
-    setTimeout(() => {
-        window.Telegram?.WebApp?.MainButton.hide();
-        // В будущем здесь будет реальный вызов вебхука парсинга
-        if (setActiveTab) setActiveTab('cart');
-    }, 1000);
+
+    // 1. Показываем лоадер в Telegram
+    const mainBtn = window.Telegram?.WebApp?.MainButton;
+    mainBtn?.setText("⏳ Ищем товар...");
+    mainBtn?.show();
+    mainBtn?.showProgress();
+
+    try {
+        // 2. Отправляем запрос на твой n8n вебхук
+        const tgId = user?.id || 1332986231;
+
+        const res = await fetch('https://proshein.com/webhook/parse-shein', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                link: link,
+                tg_id: tgId
+            })
+        });
+
+        const json = await res.json();
+
+        // 3. Проверяем ответ
+        // Твой вебхук возвращает { status: "success", ... } в конце успешной цепочки
+        if (json.status === 'success' || (json.items && json.items.length > 0) || json.count > 0) {
+            window.Telegram?.WebApp?.HapticFeedback.notificationOccurred('success');
+            setLink(''); // Очищаем поле
+            
+            // Переходим в корзину, чтобы показать результат
+            if (setActiveTab) setActiveTab('cart');
+        } else {
+            throw new Error(json.message || 'Не удалось найти товар');
+        }
+
+    } catch (e) {
+        console.error(e);
+        window.Telegram?.WebApp?.showAlert("Ошибка: " + (e.message || "Неверная ссылка"));
+        window.Telegram?.WebApp?.HapticFeedback.notificationOccurred('error');
+    } finally {
+        // 4. Скрываем лоадер
+        mainBtn?.hideProgress();
+        mainBtn?.hide();
+    }
   };
 
   const copyId = (e) => {
