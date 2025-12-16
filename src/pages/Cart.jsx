@@ -48,7 +48,7 @@ export default function Cart({ user, dbUser, setActiveTab }) {
   const loadCart = async () => {
     setLoading(true);
     try {
-      const tgId = user?.id || 1332986231;
+      const tgId = user?.id;
       const res = await fetch(`https://proshein.com/webhook/get-cart?tg_id=${tgId}`);
       const text = await res.text();
       
@@ -148,7 +148,7 @@ export default function Cart({ user, dbUser, setActiveTab }) {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({
-                  tg_id: user?.id || 1332986231,
+                  tg_id: user?.id,
                   user_info: {
                       name: checkoutForm.name,
                       phone: checkoutForm.phone,
