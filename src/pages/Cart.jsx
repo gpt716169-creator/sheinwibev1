@@ -401,30 +401,38 @@ export default function Cart({ user, dbUser, setActiveTab }) {
                  <div className="flex flex-col gap-4 bg-surface-dark/50 p-5 rounded-2xl border border-white/5">
                      <div className="space-y-1.5">
                          <label className="text-[11px] font-bold uppercase tracking-wider text-white/50 ml-1">ФИО</label>
-                         <input className="custom-input w-full rounded-xl px-4 py-3 text-sm" value={checkoutForm.name} onChange={e => setCheckoutForm({...checkoutForm, name: e.target.value})} placeholder="Иванов Иван" />
+                         <input 
+                            name="name"               // <-- Добавлено
+                            autoComplete="name"       // <-- Добавлено
+                            className="custom-input w-full rounded-xl px-4 py-3 text-sm" 
+                            value={checkoutForm.name} 
+                            onChange={e => setCheckoutForm({...checkoutForm, name: e.target.value})} 
+                            placeholder="Иванов Иван" 
+                         />
                      </div>
                      <div className="space-y-1.5">
                          <label className="text-[11px] font-bold uppercase tracking-wider text-white/50 ml-1">Телефон</label>
-                         <input className="custom-input w-full rounded-xl px-4 py-3 text-sm" type="tel" value={checkoutForm.phone} onChange={e => setCheckoutForm({...checkoutForm, phone: e.target.value})} placeholder="+7 999 ..." />
+                         <input 
+                            name="phone"              // <-- Добавлено
+                            autoComplete="tel"        // <-- Добавлено
+                            className="custom-input w-full rounded-xl px-4 py-3 text-sm" 
+                            type="tel" 
+                            value={checkoutForm.phone} 
+                            onChange={e => setCheckoutForm({...checkoutForm, phone: e.target.value})} 
+                            placeholder="+7 999 ..." 
+                         />
                      </div>
                      <div className="space-y-1.5">
                          <label className="text-[11px] font-bold uppercase tracking-wider text-white/50 ml-1">Email</label>
-                         <input className="custom-input w-full rounded-xl px-4 py-3 text-sm" type="email" value={checkoutForm.email} onChange={e => setCheckoutForm({...checkoutForm, email: e.target.value})} placeholder="mail@example.com" />
-                     </div>
-                     <div className="h-px bg-white/5 my-2"></div>
-                     <div className="space-y-3">
-                         <label className="text-[11px] font-bold uppercase tracking-wider text-white/50 ml-1">Доставка</label>
-                         <label className="flex items-center gap-3 p-3 rounded-xl border border-white/10 bg-white/5 cursor-pointer">
-                             <div className="relative flex items-center">
-                                 <input type="checkbox" className="peer sr-only" checked={checkoutForm.isDeliveryToggle} onChange={e => setCheckoutForm({...checkoutForm, isDeliveryToggle: e.target.checked, deliveryMethod: e.target.checked ? 'Почта РФ' : 'ПВЗ (5Post)'})} />
-                                 <div className="w-11 h-6 bg-gray-700 rounded-full peer peer-checked:bg-primary peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all"></div>
-                             </div>
-                             <span className="text-sm font-medium text-white">{checkoutForm.isDeliveryToggle ? 'Почта РФ' : 'ПВЗ (5Post)'}</span>
-                         </label>
-                         <div>
-                             <label className="text-[11px] font-bold uppercase tracking-wider text-primary ml-1">Адрес</label>
-                             <input className="custom-input w-full rounded-xl px-4 py-3 text-sm" value={checkoutForm.address} onChange={e => setCheckoutForm({...checkoutForm, address: e.target.value})} placeholder="Город, Улица, Дом" />
-                         </div>
+                         <input 
+                            name="email"              // <-- Добавлено
+                            autoComplete="email"      // <-- Добавлено
+                            className="custom-input w-full rounded-xl px-4 py-3 text-sm" 
+                            type="email" 
+                            value={checkoutForm.email} 
+                            onChange={e => setCheckoutForm({...checkoutForm, email: e.target.value})} 
+                            placeholder="mail@example.com" 
+                         />
                      </div>
                      
                      {/* Галочки согласия */}
