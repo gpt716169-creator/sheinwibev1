@@ -124,7 +124,7 @@ export default function Cart({ user, dbUser, setActiveTab }) {
 
       // 2. Отправляем в базу
       try {
-          await fetch('https://proshein.com/webhook/update-cart-item', {
+          const res = await fetch('https://proshein.com/webhook/update-cart-item', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({
@@ -134,10 +134,15 @@ export default function Cart({ user, dbUser, setActiveTab }) {
                   tg_id: user?.id
               })
           });
-          window.Telegram?.WebApp?.HapticFeedback.notificationOccurred('success');
+          const json = await res.json();
+          if(json.status === 'success') {
+             window.Telegram?.WebApp?.HapticFeedback.notificationOccurred('success');
+          } else {
+             throw new Error("API Error");
+          }
       } catch (e) {
           console.error("Save error:", e);
-          window.Telegram?.WebApp?.showAlert("Ошибка сохранения в базу");
+          window.Telegram?.WebApp?.showAlert("Ошибка сохранения в базу, но в приложении обновлено");
       } finally {
           setSavingItem(false);
           setEditingItem(null); // Закрываем модалку
@@ -298,12 +303,12 @@ export default function Cart({ user, dbUser, setActiveTab }) {
           </div>
       )}
 
-      {/* --- МОДАЛКА РЕДАКТИРОВАНИЯ (КОМПАКТНАЯ) --- */}
+      {/* --- МОДАЛКА РЕДАКТИРОВАНИЯ (ЦЕНТРАЛЬНАЯ) --- */}
       {editingItem && (
-          <div className="fixed inset-0 z-[60] flex items-end justify-center sm:items-center p-0 sm:p-4 animate-fade-in bg-black/80 backdrop-blur-sm" onClick={() => setEditingItem(null)}>
-               <div className="bg-[#151c28] w-full max-w-sm rounded-t-3xl sm:rounded-2xl border-t sm:border border-white/10 overflow-hidden flex flex-col" onClick={e => e.stopPropagation()}>
+          <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fade-in" onClick={() => setEditingItem(null)}>
+               <div className="bg-[#151c28] w-full max-w-sm rounded-2xl border border-white/10 overflow-hidden flex flex-col shadow-2xl" onClick={e => e.stopPropagation()}>
                    
-                   {/* Компактная шапка: Картинка + Название */}
+                   {/* Компактная шапка */}
                    <div className="flex gap-4 p-5 border-b border-white/5 bg-[#1a2332]">
                        <div className="w-16 h-20 rounded-lg bg-cover bg-center shrink-0 bg-white/5 border border-white/10 shadow-sm" style={{backgroundImage: `url('${editingItem.image_url}')`}}></div>
                        <div className="flex flex-col justify-center pr-4">
