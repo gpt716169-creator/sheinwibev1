@@ -78,31 +78,37 @@ export default function Cart({ user, dbUser, setActiveTab }) {
   const searchPvz = async (q) => {
       setLoadingPvz(true);
       try {
-          console.log("Searching PVZ:", q); // Лог запроса
+          console.log("Запрос поиска:", q);
           const res = await fetch(`https://proshein.com/webhook/search-pvz?q=${encodeURIComponent(q)}`);
           
           const rawData = await res.json();
-          console.log("PVZ Response:", rawData); // Лог ответа сервера
+          console.log("Ответ сервера (raw):", rawData);
 
-          // Универсальный парсинг: ищем массив хоть где-то
           let list = [];
+
+          // 1. Если пришел чистый массив (как ты прислал в чат)
           if (Array.isArray(rawData)) {
               list = rawData;
-          } else if (rawData && Array.isArray(rawData.data)) {
+          } 
+          // 2. Если массив спрятан внутри ключа "json" (стандарт n8n Code node)
+          else if (rawData && Array.isArray(rawData.json)) {
+              list = rawData.json;
+          }
+          // 3. Другие варианты (data, rows, items)
+          else if (rawData && Array.isArray(rawData.data)) {
               list = rawData.data;
           } else if (rawData && Array.isArray(rawData.rows)) {
               list = rawData.rows;
-          } else if (rawData && Array.isArray(rawData.items)) {
-              list = rawData.items;
           }
 
-          // Фильтруем пустые, если вдруг попадутся
+          console.log("Распознанный список:", list);
           setPvzResults(list);
-      } catch (e) { 
-          console.error("Search PVZ Error:", e); 
-          window.Telegram?.WebApp?.showAlert("Ошибка поиска ПВЗ");
-      } finally { 
-          setLoadingPvz(false); 
+
+      } catch (e) {
+          console.error("Ошибка поиска:", e);
+          // Не показываем алерт на каждый чих, просто пишем в консоль
+      } finally {
+          setLoadingPvz(false);
       }
   };
 
