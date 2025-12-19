@@ -3,14 +3,7 @@ import { createPortal } from 'react-dom';
 import AddressBlock from './AddressBlock';
 
 export default function CheckoutModal({ 
-  onClose, 
-  user, 
-  dbUser, 
-  total,
-  items,
-  pointsUsed,
-  couponDiscount,
-  activeCoupon,
+  onClose, user, dbUser, total, items, pointsUsed, couponDiscount, activeCoupon,
   // Пропсы для AddressBlock
   addresses, deliveryMethod, setDeliveryMethod,
   selectedAddress, setSelectedAddress,
@@ -28,53 +21,61 @@ export default function CheckoutModal({
     return () => document.body.style.overflow = 'auto';
   }, []);
 
-  // ЛОГИКА "ВЗЯТЬ ИЗ ПРОФИЛЯ"
+  // 1. ЛОГИКА "ВЗЯТЬ ИЗ ПРОФИЛЯ" (Чекбокс)
   useEffect(() => {
     if (useSavedData) {
-        console.log("DB USER DATA:", dbUser); // Посмотри в консоль, что приходит!
-        
+        // Логика остается для подстраховки, если адрес не выбран
         const name = dbUser?.first_name || dbUser?.name || user?.first_name || '';
-        // Берем телефон и email, только если они не null и не undefined
-        const phone = dbUser?.phone || ''; 
+        const phone = dbUser?.phone || '';
         const email = dbUser?.email || '';
-        
         setForm(prev => ({ ...prev, name, phone, email }));
     }
   }, [useSavedData, dbUser, user]);
 
+  // 2. НОВАЯ ФУНКЦИЯ: ЗАПОЛНИТЬ ИЗ АДРЕСА
+  // Эту функцию мы передадим в AddressBlock
+  const handleAddressSelect = (addr) => {
+      console.log("Выбран адрес с данными:", addr);
+      if (addr) {
+          setForm(prev => ({
+              ...prev,
+              // Если в адресе есть имя/телефон - берем их. Если нет - оставляем что было.
+              name: addr.full_name || prev.name,
+              phone: addr.phone || prev.phone,
+              email: addr.email || prev.email
+          }));
+          // Автоматически ставим галочку, что данные взяты (визуально приятно)
+          if (addr.full_name && addr.phone) {
+             // Можно включить или не включать useSavedData, но лучше просто заполнить форму
+          }
+      }
+  };
+
   const handlePay = async () => {
-     // 1. ЧЕТКАЯ ВАЛИДАЦИЯ КОНТАКТОВ
-     if (!form.name) { window.Telegram?.WebApp?.showAlert('Введите ФИО получателя'); return; }
-     if (!form.phone) { window.Telegram?.WebApp?.showAlert('Введите номер телефона'); return; }
-     
+     if (!form.name || form.name.length < 2) { 
+         window.Telegram?.WebApp?.showAlert('Введите ФИО получателя'); return; 
+     }
+     if (!form.phone || form.phone.length < 5) { 
+         window.Telegram?.WebApp?.showAlert('Введите номер телефона'); return; 
+     }
      if (!form.agreed || !form.customsAgreed) {
-         window.Telegram?.WebApp?.showAlert('Примите условия оферты и таможни');
-         return;
+         window.Telegram?.WebApp?.showAlert('Примите условия оферты и таможни'); return;
      }
 
-     // 2. ВАЛИДАЦИЯ АДРЕСА
      let finalAddress = '';
      let pickupInfo = null;
 
      if (deliveryMethod === 'ПВЗ (5Post)') {
          if (!selectedPvz) {
-             // Проверяем, может юзер выбрал сохраненный 5post (он будет в selectedAddress, но с пометкой)
-             // Если логика AddressBlock вернет selectedPvz, то все ок.
-             // Если нет, просим выбрать.
-             window.Telegram?.WebApp?.showAlert('Выберите пункт выдачи 5Post');
-             return;
+             window.Telegram?.WebApp?.showAlert('Выберите пункт выдачи 5Post'); return;
          }
          finalAddress = `5Post: ${selectedPvz.city}, ${selectedPvz.address} (${selectedPvz.name})`;
          pickupInfo = { id: selectedPvz.id, postal_code: selectedPvz.postal_code };
      } else {
-         // Почта / Курьер
          if (selectedAddress) {
-             finalAddress = [selectedAddress.region, selectedAddress.city, selectedAddress.street, selectedAddress.house, selectedAddress.flat]
-                .filter(Boolean)
-                .join(', ');
+             finalAddress = [selectedAddress.region, selectedAddress.city, selectedAddress.street, selectedAddress.house, selectedAddress.flat].filter(Boolean).join(', ');
          } else {
-             window.Telegram?.WebApp?.showAlert('Выберите адрес доставки');
-             return;
+             window.Telegram?.WebApp?.showAlert('Выберите адрес доставки'); return;
          }
      }
 
@@ -146,24 +147,31 @@ export default function CheckoutModal({
                  </div>
              </div>
 
-             <input value={form.name} onChange={e => setForm({...form, name: e.target.value})} placeholder="ФИО Получателя" className="custom-input w-full bg-[#1c2636] border border-white/10 text-white rounded-xl px-4 py-3 text-sm focus:border-primary outline-none" />
-             <input value={form.phone} onChange={e => setForm({...form, phone: e.target.value})} type="tel" placeholder="Телефон (+7...)" className="custom-input w-full bg-[#1c2636] border border-white/10 text-white rounded-xl px-4 py-3 text-sm focus:border-primary outline-none" />
-             <input value={form.email} onChange={e => setForm({...form, email: e.target.value})} type="email" placeholder="Email (для чека)" className="custom-input w-full bg-[#1c2636] border border-white/10 text-white rounded-xl px-4 py-3 text-sm focus:border-primary outline-none" />
+             <div className="space-y-3">
+                <input value={form.name} onChange={e => setForm({...form, name: e.target.value})} placeholder="ФИО Получателя" className="custom-input w-full bg-[#1c2636] border border-white/10 text-white rounded-xl px-4 py-3 text-sm focus:border-primary outline-none" />
+                <input value={form.phone} onChange={e => setForm({...form, phone: e.target.value})} type="tel" placeholder="Телефон (+7...)" className="custom-input w-full bg-[#1c2636] border border-white/10 text-white rounded-xl px-4 py-3 text-sm focus:border-primary outline-none" />
+                <input value={form.email} onChange={e => setForm({...form, email: e.target.value})} type="email" placeholder="Email (для чека)" className="custom-input w-full bg-[#1c2636] border border-white/10 text-white rounded-xl px-4 py-3 text-sm focus:border-primary outline-none" />
+             </div>
          </section>
 
          {/* ДОСТАВКА */}
          <section className="space-y-3">
              <h3 className="text-[10px] uppercase font-bold text-white/50 tracking-wider">Способ доставки</h3>
+             
+             {/* ПЕРЕДАЕМ НОВУЮ ФУНКЦИЮ ВНИЗ */}
              <AddressBlock 
                  deliveryMethod={deliveryMethod} setDeliveryMethod={setDeliveryMethod}
                  addresses={addresses} selectedAddress={selectedAddress} setSelectedAddress={setSelectedAddress}
                  pvzQuery={pvzQuery} setPvzQuery={setPvzQuery} pvzResults={pvzResults}
                  selectedPvz={selectedPvz} setSelectedPvz={setSelectedPvz} loadingPvz={loadingPvz}
                  onOpenProfile={onOpenProfile}
+                 
+                 // ВОТ ОНА:
+                 onFillFromAddress={handleAddressSelect} 
              />
          </section>
 
-         {/* СОГЛАШЕНИЯ */}
+         {/* Соглашения */}
          <section className="space-y-3 pt-2">
              <label className="flex gap-3 items-center cursor-pointer group select-none">
                  <input type="checkbox" checked={form.agreed} onChange={e => setForm({...form, agreed: e.target.checked})} className="w-5 h-5 rounded border-white/30 bg-white/5 checked:bg-primary checked:border-primary appearance-none transition-colors" />
@@ -176,7 +184,6 @@ export default function CheckoutModal({
          </section>
       </div>
 
-      {/* Кнопка Оплаты */}
       <div className="absolute bottom-0 left-0 right-0 p-5 bg-[#101622] border-t border-white/5 pb-safe-bottom z-20">
           <button onClick={handlePay} disabled={loading} className="w-full h-14 bg-primary text-[#102216] font-black rounded-xl text-lg uppercase shadow-[0_0_20px_rgba(19,236,91,0.3)] active:scale-95 transition-transform flex items-center justify-center gap-2">
             {loading ? <span className="material-symbols-outlined animate-spin">progress_activity</span> : `Оплатить ${total.toLocaleString()} ₽`}
