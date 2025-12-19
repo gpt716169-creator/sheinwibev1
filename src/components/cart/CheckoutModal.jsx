@@ -4,14 +4,14 @@ import AddressBlock from './AddressBlock';
 
 export default function CheckoutModal({ 
   onClose, user, dbUser, total, items, pointsUsed, couponDiscount, activeCoupon,
-  // Пропсы
+  // Адреса
   addresses, deliveryMethod, setDeliveryMethod,
   selectedAddress, setSelectedAddress,
   selectedPvz, setSelectedPvz,
-  onOpenProfile
+  // Действия
+  onManageAddresses
 }) {
 
-  // Данные заполнятся сами при выборе адреса
   const [form, setForm] = useState({ name: '', phone: '', email: '', agreed: false, customsAgreed: false });
   const [loading, setLoading] = useState(false);
 
@@ -20,7 +20,6 @@ export default function CheckoutModal({
     return () => document.body.style.overflow = 'auto';
   }, []);
 
-  // Функция автозаполнения (вызывается из AddressBlock)
   const handleAddressSelect = (addr) => {
       if (addr) {
           setForm(prev => ({
@@ -33,31 +32,24 @@ export default function CheckoutModal({
   };
 
   const handlePay = async () => {
-     // Валидация контактов
-     if (!form.name || form.name.length < 2) { 
-         window.Telegram?.WebApp?.showAlert('Введите ФИО получателя'); return; 
-     }
-     if (!form.phone || form.phone.length < 5) { 
-         window.Telegram?.WebApp?.showAlert('Введите номер телефона'); return; 
-     }
-     if (!form.agreed || !form.customsAgreed) {
-         window.Telegram?.WebApp?.showAlert('Примите условия оферты и таможни'); return;
-     }
+     // Валидация
+     if (!form.name || form.name.length < 2) { window.Telegram?.WebApp?.showAlert('Введите ФИО получателя'); return; }
+     if (!form.phone || form.phone.length < 5) { window.Telegram?.WebApp?.showAlert('Введите номер телефона'); return; }
+     if (!form.agreed || !form.customsAgreed) { window.Telegram?.WebApp?.showAlert('Примите соглашения'); return; }
 
      let finalAddress = '';
      let pickupInfo = null;
 
-     // СТРОГАЯ ВАЛИДАЦИЯ ВЫБОРА АДРЕСА
      if (deliveryMethod === 'ПВЗ (5Post)') {
          if (!selectedPvz) {
-             window.Telegram?.WebApp?.showAlert('Выберите сохраненный магазин 5Post из списка');
+             window.Telegram?.WebApp?.showAlert('Выберите сохраненный магазин 5Post или добавьте его в профиле');
              return;
          }
          finalAddress = `5Post: ${selectedPvz.city}, ${selectedPvz.address}`;
          pickupInfo = { id: selectedPvz.id, postal_code: '000000' };
      } else {
          if (!selectedAddress) {
-             window.Telegram?.WebApp?.showAlert('Выберите адрес доставки из списка');
+             window.Telegram?.WebApp?.showAlert('Выберите сохраненный адрес доставки или добавьте его в профиле');
              return;
          }
          finalAddress = [selectedAddress.region, selectedAddress.city, selectedAddress.street, selectedAddress.house, selectedAddress.flat].filter(Boolean).join(', ');
@@ -119,7 +111,6 @@ export default function CheckoutModal({
       {/* Контент */}
       <div className="flex-1 overflow-y-auto p-5 pb-32 space-y-6">
          
-         {/* КОНТАКТЫ */}
          <section className="space-y-3">
              <h3 className="text-[10px] uppercase font-bold text-white/50 tracking-wider">Контакты получателя</h3>
              <div className="space-y-3">
@@ -129,21 +120,19 @@ export default function CheckoutModal({
              </div>
          </section>
 
-         {/* ДОСТАВКА */}
          <section className="space-y-3">
              <h3 className="text-[10px] uppercase font-bold text-white/50 tracking-wider">Способ доставки</h3>
-             
              <AddressBlock 
                  deliveryMethod={deliveryMethod} setDeliveryMethod={setDeliveryMethod}
                  addresses={addresses} 
                  selectedAddress={selectedAddress} setSelectedAddress={setSelectedAddress}
                  selectedPvz={selectedPvz} setSelectedPvz={setSelectedPvz}
-                 onOpenProfile={onOpenProfile}
+                 // Переход в адреса
+                 onManageAddresses={onManageAddresses}
                  onFillFromAddress={handleAddressSelect} 
              />
          </section>
 
-         {/* СОГЛАШЕНИЯ */}
          <section className="space-y-3 pt-2">
              <label className="flex gap-3 items-center cursor-pointer group select-none">
                  <input type="checkbox" checked={form.agreed} onChange={e => setForm({...form, agreed: e.target.checked})} className="w-5 h-5 rounded border-white/30 bg-white/5 checked:bg-primary checked:border-primary appearance-none transition-colors" />
