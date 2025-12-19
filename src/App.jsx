@@ -9,6 +9,13 @@ function App() {
   const [tgUser, setTgUser] = useState(null);
   const [dbUser, setDbUser] = useState(null);
 
+  // --- ЛОГИКА ПРОКРУТКИ НАВЕРХ ---
+  // Каждый раз, когда меняется вкладка (activeTab), мы кидаем юзера вверх
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [activeTab]);
+  // -------------------------------
+
   useEffect(() => {
     // Безопасная проверка наличия Telegram WebApp
     if (typeof window !== 'undefined' && window.Telegram?.WebApp) {
@@ -26,7 +33,7 @@ function App() {
         initUserInDB(user, startParam);
       }
 
-      // Хак для клавиатуры (чтобы поля ввода не перекрывались)
+      // Хак для клавиатуры
       const handleFocus = () => document.body.classList.add('keyboard-open');
       const handleBlur = () => document.body.classList.remove('keyboard-open');
       const inputs = document.querySelectorAll('input, textarea');
@@ -37,7 +44,6 @@ function App() {
     }
   }, []);
 
-  // Основная функция загрузки данных пользователя
   const initUserInDB = async (userData, refCode) => {
     if (!userData || !userData.id) return;
 
@@ -57,9 +63,7 @@ function App() {
         
         const json = await res.json();
 
-        // Умная обработка ответа (работает и с объектом, и с массивом)
         let finalUser = null;
-
         if (json.data) {
              finalUser = Array.isArray(json.data) ? json.data[0] : json.data;
         } else if (Array.isArray(json)) {
@@ -71,13 +75,11 @@ function App() {
         if (finalUser) {
             setDbUser(finalUser);
         }
-
     } catch (e) {
         console.error("Init Error:", e);
     }
   };
 
-  // Функция для обновления данных после покупки
   const handleRefreshData = () => {
       if (tgUser) {
           initUserInDB(tgUser, null); 
