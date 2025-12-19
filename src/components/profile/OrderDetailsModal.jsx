@@ -7,13 +7,17 @@ export default function OrderDetailsModal({ order, onClose }) {
   const trackingHistory = order.tracking_history && order.tracking_history.length > 0 
       ? order.tracking_history 
       : [
-          { date: order.created_at, status: 'Заказ оформлен', location: 'В обработке' }
+          { date: order.created_at, status: 'Заказ создан', location: 'В обработке' }
       ];
 
   const formatDate = (dateString) => {
       if (!dateString) return '';
       return new Date(dateString).toLocaleDateString('ru-RU', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
   };
+
+  // Нормализация данных (чтобы работало с разными форматами JSON)
+  const recipientName = order.recipient_name || order.contact_name || order.user_info?.name || 'Не указано';
+  const recipientPhone = order.recipient_phone || order.contact_phone || order.user_info?.phone || 'Не указано';
 
   return (
     <div className="fixed inset-0 z-[70] bg-black/80 flex items-center justify-center p-4 backdrop-blur-sm animate-fade-in" onClick={onClose}>
@@ -61,7 +65,7 @@ export default function OrderDetailsModal({ order, onClose }) {
                     </div>
                 </div>
 
-                {/* 2. ДАННЫЕ ДОСТАВКИ */}
+                {/* 2. ДАННЫЕ ДОСТАВКИ (Исправлено чтение полей) */}
                 <div className="space-y-2">
                     <h4 className="text-[10px] font-bold uppercase tracking-wider text-white/40 ml-1">Куда и кому</h4>
                     <div className="bg-white/5 rounded-xl p-4 border border-white/5 space-y-3">
@@ -76,19 +80,26 @@ export default function OrderDetailsModal({ order, onClose }) {
                             <span className="material-symbols-outlined text-white/30 text-lg">person</span>
                             <div>
                                 <p className="text-white/40 text-[10px]">Получатель</p>
-                                <p className="text-white text-sm font-medium">{order.recipient_name || order.user_info?.name}</p>
+                                <p className="text-white text-sm font-medium">{recipientName}</p>
+                            </div>
+                        </div>
+                        <div className="flex items-center gap-3">
+                            <span className="material-symbols-outlined text-white/30 text-lg">call</span>
+                            <div>
+                                <p className="text-white/40 text-[10px]">Телефон</p>
+                                <p className="text-white text-sm font-medium">{recipientPhone}</p>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                {/* 3. ТОВАРЫ (ИСПРАВЛЕННАЯ ЦЕНА) */}
+                {/* 3. ТОВАРЫ (Исправлено чтение цены) */}
                 <div className="space-y-2">
                     <h4 className="text-[10px] font-bold uppercase tracking-wider text-white/40 ml-1">Товары ({order.order_items?.length || 0})</h4>
                     <div className="space-y-2">
                         {order.order_items?.map((item, i) => {
-                            // Ищем цену в разных полях, чтобы точно найти
-                            const price = item.final_price_rub || item.price || 0;
+                            // !!! ВАЖНОЕ ИСПРАВЛЕНИЕ: читаем price_at_purchase из твоего JSON !!!
+                            const price = item.price_at_purchase || item.final_price_rub || item.price || 0;
                             
                             return (
                                 <div key={i} className="flex gap-3 bg-white/5 p-3 rounded-xl border border-white/5">
@@ -98,10 +109,9 @@ export default function OrderDetailsModal({ order, onClose }) {
                                     {/* Инфо */}
                                     <div className="flex flex-col justify-between flex-1 py-0.5 min-w-0">
                                         <div className="flex justify-between items-start gap-2">
-                                            {/* Название (обрезаем если длинное) */}
                                             <p className="text-white text-xs font-medium line-clamp-2 leading-snug">{item.product_name}</p>
                                             
-                                            {/* ЦЕНА (Не сжимается - shrink-0) */}
+                                            {/* ЦЕНА */}
                                             <p className="text-primary font-bold text-sm shrink-0 whitespace-nowrap">
                                                 {price.toLocaleString()} ₽
                                             </p>
@@ -124,7 +134,7 @@ export default function OrderDetailsModal({ order, onClose }) {
                 {/* 4. ИТОГО */}
                 <div className="space-y-1 pt-3 border-t border-white/10">
                      <div className="flex justify-between items-center text-xs text-white/50">
-                        <span>Сумма товаров</span>
+                        <span>Сумма заказа</span>
                         <span>{((order.total_amount || 0) + (order.discount_amount || 0)).toLocaleString()} ₽</span>
                      </div>
                      {(order.discount_amount > 0) && (
