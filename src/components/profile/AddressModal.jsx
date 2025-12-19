@@ -201,10 +201,10 @@ export default function AddressModal({ isOpen, onClose, editingAddress, user, on
                             className="custom-input w-full rounded-xl px-4 py-3 text-sm min-h-[80px]" 
                             value={addrDetails.street} 
                             onChange={e => setAddrDetails({...addrDetails, street: e.target.value})} 
-                            placeholder="Точный адрес постамата или кассы.&#10;Например: ул. Ленина 5, магазин Пятерочка, постамат у входа" 
+                            placeholder="Точный адрес постамата или кассы.&#10;Например: ул. Ленина 5" 
                         />
                         <p className="text-[10px] text-white/40 ml-1">
-                            *Укажите улицу, номер дома и где именно находится пункт (магазин, касса).
+                            *Укажите улицу и номер дома где именно находится пункт 5Post.
                         </p>
                     </div>
                 )}
