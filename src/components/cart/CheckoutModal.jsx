@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { createPortal } from 'react-dom'; // <--- ГЛАВНЫЙ ИМПОРТ
+import { createPortal } from 'react-dom';
 import AddressBlock from './AddressBlock';
 
 export default function CheckoutModal({ 
@@ -23,19 +23,19 @@ export default function CheckoutModal({
   const [useSavedData, setUseSavedData] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  // Блокируем скролл основной страницы
   useEffect(() => {
     document.body.style.overflow = 'hidden';
     return () => document.body.style.overflow = 'auto';
   }, []);
 
-  // Логика "Взять из профиля"
+  // ЛОГИКА "ВЗЯТЬ ИЗ ПРОФИЛЯ"
   useEffect(() => {
     if (useSavedData) {
-        // Приоритет: Данные из базы (dbUser) -> Данные из Телеграма (user)
-        // Если в базе пусто, берем хотя бы имя из ТГ, чтобы поле не было пустым
+        console.log("DB USER DATA:", dbUser); // Посмотри в консоль, что приходит!
+        
         const name = dbUser?.first_name || dbUser?.name || user?.first_name || '';
-        const phone = dbUser?.phone || ''; // Если в базе телефона нет, будет пусто
+        // Берем телефон и email, только если они не null и не undefined
+        const phone = dbUser?.phone || ''; 
         const email = dbUser?.email || '';
         
         setForm(prev => ({ ...prev, name, phone, email }));
@@ -43,22 +43,24 @@ export default function CheckoutModal({
   }, [useSavedData, dbUser, user]);
 
   const handlePay = async () => {
-     // 1. Валидация контактов
-     if (!form.name || !form.phone) {
-         window.Telegram?.WebApp?.showAlert('Заполните Имя и Телефон');
-         return;
-     }
+     // 1. ЧЕТКАЯ ВАЛИДАЦИЯ КОНТАКТОВ
+     if (!form.name) { window.Telegram?.WebApp?.showAlert('Введите ФИО получателя'); return; }
+     if (!form.phone) { window.Telegram?.WebApp?.showAlert('Введите номер телефона'); return; }
+     
      if (!form.agreed || !form.customsAgreed) {
          window.Telegram?.WebApp?.showAlert('Примите условия оферты и таможни');
          return;
      }
 
-     // 2. Валидация адреса
+     // 2. ВАЛИДАЦИЯ АДРЕСА
      let finalAddress = '';
      let pickupInfo = null;
 
      if (deliveryMethod === 'ПВЗ (5Post)') {
          if (!selectedPvz) {
+             // Проверяем, может юзер выбрал сохраненный 5post (он будет в selectedAddress, но с пометкой)
+             // Если логика AddressBlock вернет selectedPvz, то все ок.
+             // Если нет, просим выбрать.
              window.Telegram?.WebApp?.showAlert('Выберите пункт выдачи 5Post');
              return;
          }
@@ -67,20 +69,17 @@ export default function CheckoutModal({
      } else {
          // Почта / Курьер
          if (selectedAddress) {
-             // Формируем красивую строку адреса
              finalAddress = [selectedAddress.region, selectedAddress.city, selectedAddress.street, selectedAddress.house, selectedAddress.flat]
                 .filter(Boolean)
                 .join(', ');
          } else {
-             window.Telegram?.WebApp?.showAlert('Выберите адрес доставки из списка или добавьте новый в профиле');
+             window.Telegram?.WebApp?.showAlert('Выберите адрес доставки');
              return;
          }
      }
 
      setLoading(true);
-     
      try {
-         // Формируем данные для отправки в n8n
          const payload = {
             tg_id: user?.id || 1332986231,
             user_info: {
@@ -98,7 +97,7 @@ export default function CheckoutModal({
             points_used: pointsUsed,
             coupon_code: activeCoupon,
             coupon_discount: couponDiscount,
-            discount_applied: pointsUsed + couponDiscount // Для обратной совместимости
+            discount_applied: pointsUsed + couponDiscount
          };
 
          const res = await fetch('https://proshein.com/webhook/create-order', {
@@ -110,11 +109,10 @@ export default function CheckoutModal({
          const json = await res.json();
          if (json.status === 'success') {
              window.Telegram?.WebApp?.showAlert(`Заказ #${json.order_id} успешно создан!`);
-             onClose(true); // Передаем true, чтобы Cart.jsx знал, что заказ успешен
+             onClose(true);
          } else {
              throw new Error(json.message || 'Ошибка сервера');
          }
-
      } catch (e) {
          window.Telegram?.WebApp?.showAlert('Ошибка: ' + e.message);
      } finally {
@@ -122,37 +120,25 @@ export default function CheckoutModal({
      }
   };
 
-  // --- ИСПОЛЬЗУЕМ PORTAL (Рендерим прямо в body) ---
   return createPortal(
-    <div 
-        className="fixed inset-0 z-[99999] bg-[#101622] flex flex-col animate-slide-up"
-        style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0 }} // Железобетонная фиксация
-    >
-      {/* Шапка (Фиксированная) */}
+    <div className="fixed inset-0 z-[99999] bg-[#101622] flex flex-col animate-slide-up" style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0 }}>
+      {/* Шапка */}
       <div className="flex items-center justify-between p-4 border-b border-white/5 bg-[#101622] shrink-0 pt-safe-top">
-         <button 
-            onClick={() => onClose(false)} 
-            className="flex items-center gap-1 text-white/50 px-2 py-1 active:opacity-50"
-         >
-            <span className="material-symbols-outlined text-lg">arrow_back_ios</span>
-            <span className="text-sm">Назад</span>
+         <button onClick={() => onClose(false)} className="flex items-center gap-1 text-white/50 px-2 py-1 active:opacity-50">
+            <span className="material-symbols-outlined text-lg">arrow_back_ios</span><span className="text-sm">Назад</span>
          </button>
          <h2 className="text-white font-bold text-lg">Оформление</h2>
          <div className="w-16"></div>
       </div>
 
-      {/* Скроллируемая часть (Контент) */}
+      {/* Контент */}
       <div className="flex-1 overflow-y-auto p-5 pb-32 space-y-6">
          
-         {/* 1. Контакты */}
+         {/* КОНТАКТЫ */}
          <section className="space-y-3">
              <div className="flex justify-between items-center">
                  <h3 className="text-[10px] uppercase font-bold text-white/50 tracking-wider">Контакты получателя</h3>
-                 {/* Кнопка "Взять из профиля" */}
-                 <div 
-                    onClick={() => setUseSavedData(!useSavedData)} 
-                    className="flex items-center gap-2 cursor-pointer active:opacity-70"
-                 >
+                 <div onClick={() => setUseSavedData(!useSavedData)} className="flex items-center gap-2 cursor-pointer active:opacity-70">
                      <div className={`w-4 h-4 rounded border flex items-center justify-center transition-colors ${useSavedData ? 'bg-primary border-primary' : 'border-white/30'}`}>
                          {useSavedData && <span className="material-symbols-outlined text-[10px] text-black font-bold">check</span>}
                      </div>
@@ -160,32 +146,14 @@ export default function CheckoutModal({
                  </div>
              </div>
 
-             <input 
-                value={form.name} 
-                onChange={e => setForm({...form, name: e.target.value})} 
-                placeholder="ФИО Получателя" 
-                className="custom-input w-full bg-[#1c2636] border border-white/10 text-white rounded-xl px-4 py-3 text-sm focus:border-primary outline-none" 
-             />
-             <input 
-                value={form.phone} 
-                onChange={e => setForm({...form, phone: e.target.value})} 
-                type="tel" 
-                placeholder="Телефон (+7...)" 
-                className="custom-input w-full bg-[#1c2636] border border-white/10 text-white rounded-xl px-4 py-3 text-sm focus:border-primary outline-none" 
-             />
-             <input 
-                value={form.email} 
-                onChange={e => setForm({...form, email: e.target.value})} 
-                type="email" 
-                placeholder="Email (для чека)" 
-                className="custom-input w-full bg-[#1c2636] border border-white/10 text-white rounded-xl px-4 py-3 text-sm focus:border-primary outline-none" 
-             />
+             <input value={form.name} onChange={e => setForm({...form, name: e.target.value})} placeholder="ФИО Получателя" className="custom-input w-full bg-[#1c2636] border border-white/10 text-white rounded-xl px-4 py-3 text-sm focus:border-primary outline-none" />
+             <input value={form.phone} onChange={e => setForm({...form, phone: e.target.value})} type="tel" placeholder="Телефон (+7...)" className="custom-input w-full bg-[#1c2636] border border-white/10 text-white rounded-xl px-4 py-3 text-sm focus:border-primary outline-none" />
+             <input value={form.email} onChange={e => setForm({...form, email: e.target.value})} type="email" placeholder="Email (для чека)" className="custom-input w-full bg-[#1c2636] border border-white/10 text-white rounded-xl px-4 py-3 text-sm focus:border-primary outline-none" />
          </section>
 
-         {/* 2. Доставка (Компонент AddressBlock) */}
+         {/* ДОСТАВКА */}
          <section className="space-y-3">
              <h3 className="text-[10px] uppercase font-bold text-white/50 tracking-wider">Способ доставки</h3>
-             
              <AddressBlock 
                  deliveryMethod={deliveryMethod} setDeliveryMethod={setDeliveryMethod}
                  addresses={addresses} selectedAddress={selectedAddress} setSelectedAddress={setSelectedAddress}
@@ -195,41 +163,26 @@ export default function CheckoutModal({
              />
          </section>
 
-         {/* 3. Соглашения */}
+         {/* СОГЛАШЕНИЯ */}
          <section className="space-y-3 pt-2">
              <label className="flex gap-3 items-center cursor-pointer group select-none">
-                 <input 
-                    type="checkbox" 
-                    checked={form.agreed} 
-                    onChange={e => setForm({...form, agreed: e.target.checked})} 
-                    className="w-5 h-5 rounded border-white/30 bg-white/5 checked:bg-primary checked:border-primary appearance-none transition-colors cursor-pointer relative after:content-['✓'] after:absolute after:text-black after:text-xs after:font-bold after:left-[3px] after:top-[1px] checked:after:block after:hidden" 
-                 />
-                 <span className="text-xs text-white/60 group-active:text-white">Я согласен с условиями публичной оферты</span>
+                 <input type="checkbox" checked={form.agreed} onChange={e => setForm({...form, agreed: e.target.checked})} className="w-5 h-5 rounded border-white/30 bg-white/5 checked:bg-primary checked:border-primary appearance-none transition-colors" />
+                 <span className="text-xs text-white/60">Я согласен с условиями публичной оферты</span>
              </label>
              <label className="flex gap-3 items-center cursor-pointer group select-none">
-                 <input 
-                    type="checkbox" 
-                    checked={form.customsAgreed} 
-                    onChange={e => setForm({...form, customsAgreed: e.target.checked})} 
-                    className="w-5 h-5 rounded border-white/30 bg-white/5 checked:bg-primary checked:border-primary appearance-none transition-colors cursor-pointer relative after:content-['✓'] after:absolute after:text-black after:text-xs after:font-bold after:left-[3px] after:top-[1px] checked:after:block after:hidden" 
-                 />
-                 <span className="text-xs text-white/60 group-active:text-white">Я предоставлю паспортные данные для таможни (через СДЭК/Брокера)</span>
+                 <input type="checkbox" checked={form.customsAgreed} onChange={e => setForm({...form, customsAgreed: e.target.checked})} className="w-5 h-5 rounded border-white/30 bg-white/5 checked:bg-primary checked:border-primary appearance-none transition-colors" />
+                 <span className="text-xs text-white/60">Паспорт для таможни (через СДЭК)</span>
              </label>
          </section>
       </div>
 
-      {/* Кнопка Оплаты (Фиксированный низ) */}
+      {/* Кнопка Оплаты */}
       <div className="absolute bottom-0 left-0 right-0 p-5 bg-[#101622] border-t border-white/5 pb-safe-bottom z-20">
-          <button 
-            onClick={handlePay} 
-            disabled={loading}
-            className="w-full h-14 bg-primary text-[#102216] font-black rounded-xl text-lg uppercase shadow-[0_0_20px_rgba(19,236,91,0.3)] active:scale-95 transition-transform disabled:opacity-50 disabled:scale-100 flex items-center justify-center gap-2"
-          >
-            {loading ? <span className="material-symbols-outlined animate-spin">progress_activity</span> : 'Оплатить'}
-            {!loading && <span>{total.toLocaleString()} ₽</span>}
+          <button onClick={handlePay} disabled={loading} className="w-full h-14 bg-primary text-[#102216] font-black rounded-xl text-lg uppercase shadow-[0_0_20px_rgba(19,236,91,0.3)] active:scale-95 transition-transform flex items-center justify-center gap-2">
+            {loading ? <span className="material-symbols-outlined animate-spin">progress_activity</span> : `Оплатить ${total.toLocaleString()} ₽`}
           </button>
       </div>
     </div>,
-    document.body // <-- Рендерим в body
+    document.body
   );
 }
