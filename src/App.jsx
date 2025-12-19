@@ -24,12 +24,9 @@ function App() {
       if (user) {
         setTgUser(user);
         initUserInDB(user, startParam);
-      } else {
-         // Для тестов в браузере (если нужно)
-         // setTgUser({ id: 1332986231, first_name: "Test" });
       }
 
-      // Хак для клавиатуры
+      // Хак для клавиатуры (чтобы поля ввода не перекрывались)
       const handleFocus = () => document.body.classList.add('keyboard-open');
       const handleBlur = () => document.body.classList.remove('keyboard-open');
       const inputs = document.querySelectorAll('input, textarea');
@@ -40,7 +37,7 @@ function App() {
     }
   }, []);
 
-  // --- ФУНКЦИЯ С ДЕБАГОМ ---
+  // Основная функция загрузки данных пользователя
   const initUserInDB = async (userData, refCode) => {
     if (!userData || !userData.id) return;
 
@@ -60,36 +57,27 @@ function App() {
         
         const json = await res.json();
 
-        // 🚨 ДЕБАГ: ПОКАЗЫВАЕМ СТРУКТУРУ ОТВЕТА НА ЭКРАНЕ
-        if (window.Telegram?.WebApp) {
-             window.Telegram.WebApp.showAlert("RAW DB RESPONSE:\n" + JSON.stringify(json, null, 2).substring(0, 500));
-        }
-
-        // Умный парсинг (обрабатывает и массивы, и объекты)
+        // Умная обработка ответа (работает и с объектом, и с массивом)
         let finalUser = null;
 
         if (json.data) {
-             // Если пришло { status: "success", data: [...] }
              finalUser = Array.isArray(json.data) ? json.data[0] : json.data;
         } else if (Array.isArray(json)) {
-             // Если пришло просто [...]
              finalUser = json[0];
         } else {
-             // Если пришло просто {...}
              finalUser = json;
         }
         
         if (finalUser) {
-            console.log("User Set:", finalUser);
             setDbUser(finalUser);
         }
 
     } catch (e) {
         console.error("Init Error:", e);
-        if (window.Telegram?.WebApp) window.Telegram.WebApp.showAlert("Fetch Error: " + e.message);
     }
   };
 
+  // Функция для обновления данных после покупки
   const handleRefreshData = () => {
       if (tgUser) {
           initUserInDB(tgUser, null); 
@@ -120,4 +108,4 @@ function App() {
   );
 }
 
-export default App; // <--- ВОТ ЭТА СТРОЧКА БЫЛА ПОТЕРЯНА
+export default App;
