@@ -1,23 +1,74 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 
 export default function LoyaltyCard({ points = 0, totalSpent = 0, onOpenDetails }) {
   const [isFlipped, setIsFlipped] = useState(false);
 
+  // 1. ДИАГНОСТИКА: Смотрим, что реально пришло в компонент
+  useEffect(() => {
+      console.log("💳 LoyaltyCard получил totalSpent:", totalSpent, "Тип:", typeof totalSpent);
+  }, [totalSpent]);
+
+  // 2. БЕЗОПАСНОСТЬ: Превращаем в число, убираем мусор
+  const safeSpent = Number(totalSpent) || 0;
+
   const getLevelInfo = (spent) => {
-      if (spent >= 150000) return { current: 'Platinum', next: 'Max', target: 150000, color: 'from-slate-300 via-slate-100 to-slate-300', text: 'text-slate-800', percent: 100, icon: 'diamond' };
-      if (spent >= 50000) return { current: 'Gold', next: 'Platinum', target: 150000, color: 'from-yellow-600 via-yellow-400 to-yellow-600', text: 'text-yellow-900', percent: ((spent - 50000) / 100000) * 100, icon: 'hotel_class' };
-      if (spent >= 15000) return { current: 'Silver', next: 'Gold', target: 50000, color: 'from-gray-400 via-gray-200 to-gray-400', text: 'text-gray-800', percent: ((spent - 15000) / 35000) * 100, icon: 'stars' };
-      return { current: 'Bronze', next: 'Silver', target: 15000, color: 'from-orange-700 via-orange-400 to-orange-700', text: 'text-[#102216]', percent: (spent / 15000) * 100, icon: 'workspace_premium' };
+      // Бронза (0 - 15,000)
+      if (spent < 15000) {
+          return { 
+              current: 'Bronze', 
+              next: 'Silver', 
+              target: 15000, 
+              color: 'from-orange-700 via-orange-400 to-orange-700', 
+              text: 'text-[#102216]', 
+              percent: (spent / 15000) * 100, 
+              icon: 'workspace_premium' 
+          };
+      }
+      // Серебро (15,000 - 50,000)
+      if (spent < 50000) {
+          return { 
+              current: 'Silver', 
+              next: 'Gold', 
+              target: 50000, 
+              color: 'from-gray-400 via-gray-200 to-gray-400', 
+              text: 'text-gray-800', 
+              // (Потрачено - порог уровня) / (размер уровня) * 100
+              percent: ((spent - 15000) / 35000) * 100, 
+              icon: 'stars' 
+          };
+      }
+      // Золото (50,000 - 150,000)
+      if (spent < 150000) {
+          return { 
+              current: 'Gold', 
+              next: 'Platinum', 
+              target: 150000, 
+              color: 'from-yellow-600 via-yellow-400 to-yellow-600', 
+              text: 'text-yellow-900', 
+              percent: ((spent - 50000) / 100000) * 100, 
+              icon: 'hotel_class' 
+          };
+      }
+      // Платина (Максимум)
+      return { 
+          current: 'Platinum', 
+          next: 'Max', 
+          target: 150000, 
+          color: 'from-slate-300 via-slate-100 to-slate-300', 
+          text: 'text-slate-800', 
+          percent: 100, 
+          icon: 'diamond' 
+      };
   };
 
-  const info = getLevelInfo(totalSpent);
-  const remaining = Math.max(0, info.target - totalSpent);
+  const info = getLevelInfo(safeSpent);
+  const remaining = Math.max(0, info.target - safeSpent);
 
   return (
     <div className="w-full h-52 perspective-1000 cursor-pointer group select-none relative z-10" onClick={() => setIsFlipped(!isFlipped)}>
         <div className={`relative w-full h-full duration-700 preserve-3d transition-transform ${isFlipped ? 'rotate-y-180' : ''}`}>
             
-            {/* FRONT */}
+            {/* FRONT (Лицевая сторона) */}
             <div className={`absolute inset-0 backface-hidden rounded-2xl p-6 bg-gradient-to-br ${info.color} shadow-[0_0_30px_rgba(255,255,255,0.1)] overflow-hidden flex flex-col justify-between z-20`}>
                 <div className="absolute -top-10 -right-10 w-40 h-40 bg-white/30 rounded-full blur-3xl"></div>
                 
@@ -38,11 +89,12 @@ export default function LoyaltyCard({ points = 0, totalSpent = 0, onOpenDetails 
                     </div>
                     <div className="flex items-center gap-1 opacity-60">
                         <span className={`material-symbols-outlined text-xl ${info.text}`}>touch_app</span>
+                        <span className={`text-[10px] font-bold uppercase ${info.text}`}>Нажми</span>
                     </div>
                 </div>
             </div>
 
-            {/* BACK */}
+            {/* BACK (Обратная сторона) */}
             <div className="absolute inset-0 backface-hidden rotate-y-180 rounded-2xl p-5 bg-[#1c2636] border border-white/10 shadow-xl overflow-hidden flex flex-col justify-between z-10">
                 <div className="flex justify-between items-center pb-3 border-b border-white/5">
                     <h3 className="text-white font-bold text-sm uppercase tracking-wider">Прогресс</h3>
@@ -56,19 +108,26 @@ export default function LoyaltyCard({ points = 0, totalSpent = 0, onOpenDetails 
                         <>
                             <div className="flex justify-between text-xs mb-2">
                                 <span className="text-white/50">Выкуплено</span>
-                                <span className="text-white font-bold">{totalSpent.toLocaleString()} ₽</span>
+                                <span className="text-white font-bold">{safeSpent.toLocaleString()} ₽</span>
                             </div>
+                            
+                            {/* ПРОГРЕСС БАР */}
                             <div className="w-full h-3 bg-black/40 rounded-full overflow-hidden mb-3 border border-white/5 relative">
-                                <div className={`h-full bg-gradient-to-r ${info.color} absolute left-0 top-0 transition-all duration-1000`} style={{width: `${Math.max(5, info.percent)}%`}}></div>
+                                <div 
+                                    className={`h-full bg-gradient-to-r ${info.color} absolute left-0 top-0 transition-all duration-1000`} 
+                                    style={{ width: `${Math.max(2, info.percent)}%` }} // Минимум 2% ширины, чтобы было видно
+                                ></div>
                             </div>
+
                             <p className="text-white/60 text-[10px] text-center">
                                 Ещё <span className="text-primary font-bold">{remaining.toLocaleString()} ₽</span> до уровня <span className="font-bold text-white uppercase">{info.next}</span>
                             </p>
                         </>
                     ) : (
-                        <div className="text-center">
+                        <div className="text-center animate-pulse">
                             <span className="material-symbols-outlined text-yellow-500 text-4xl mb-2">diamond</span>
                             <p className="text-white font-bold text-sm">Максимальный уровень!</p>
+                            <p className="text-white/50 text-xs">Вы достигли вершины стиля</p>
                         </div>
                     )}
                 </div>
