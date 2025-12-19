@@ -2,14 +2,14 @@ import React, { useState, useEffect, useMemo } from 'react';
 import CartItem from '../components/cart/CartItem';
 import AddressBlock from '../components/cart/AddressBlock';
 import PaymentBlock from '../components/cart/PaymentBlock';
-import FullScreenVideo from '../components/ui/FullScreenVideo'; // <--- Импорт
+import FullScreenVideo from '../components/ui/FullScreenVideo';
 
 export default function Cart({ user, dbUser, setActiveTab }) {
-  // ... (весь твой код стейтов items, loading и т.д.) ...
+  // --- STATE: DATA ---
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   
-  // Addresses & Delivery
+  // --- STATE: ADDRESS ---
   const [addresses, setAddresses] = useState([]);
   const [deliveryMethod, setDeliveryMethod] = useState('ПВЗ (5Post)');
   const [selectedAddress, setSelectedAddress] = useState(null);
@@ -20,42 +20,59 @@ export default function Cart({ user, dbUser, setActiveTab }) {
   const [selectedPvz, setSelectedPvz] = useState(null);
   const [loadingPvz, setLoadingPvz] = useState(false);
 
-  // Checkout Data
-  const [contactForm, setContactForm] = useState({ name: '', phone: '', email: '', agreed: false, customsAgreed: false });
+  // --- STATE: CHECKOUT FORM ---
+  const [contactForm, setContactForm] = useState({ 
+      name: '', 
+      phone: '', 
+      email: '', 
+      agreed: false, 
+      customsAgreed: false 
+  });
+  
+  const [useSavedData, setUseSavedData] = useState(false); // Чекбокс "Использовать сохраненные"
 
-  // Calc
-  const [pointsInput, setPointsInput] = useState('');
-  const [currentDiscount, setCurrentDiscount] = useState(0);
+  // --- STATE: CALC & DISCOUNTS ---
+  const [pointsInput, setPointsInput] = useState('');     // Ввод баллов
+  const [pointsToUse, setPointsToUse] = useState(0);      // Реально используемые баллы (число)
+  
+  const [couponCode, setCouponCode] = useState('');
+  const [activeCoupon, setActiveCoupon] = useState(null); // Примененный купон
+  const [couponDiscount, setCouponDiscount] = useState(0); // Скидка купона
 
-  // UI State
+  // --- STATE: UI ---
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
   const [editingItem, setEditingItem] = useState(null);
   const [tempSize, setTempSize] = useState(null);
   const [tempColor, setTempColor] = useState(null);
   const [savingItem, setSavingItem] = useState(false);
   
-  // !!! НОВЫЙ СТЕЙТ ДЛЯ ВИДЕО !!!
   const [isVideoOpen, setIsVideoOpen] = useState(false);
-
-  const userPointsBalance = dbUser?.points || 0;
-  
-  // ССЫЛКА НА ВИДЕО (Замени на свою из Supabase)
   const VIDEO_URL = "https://storage.yandexcloud.net/videosheinwibe/vkclips_20251219083418.mp4"; 
 
-  // ... (useEffect и все функции loadCart, loadAddresses, searchPvz остаются без изменений) ...
+  // --- CONSTANTS ---
+  const MAX_POINTS_PERCENT = 0.35; // 35%
+  const userPointsBalance = dbUser?.points || 0;
+
+  // --- EFFECTS ---
 
   useEffect(() => {
     if (user?.id) {
         loadCart();
         loadAddresses();
-        setContactForm(prev => ({
-            ...prev,
-            name: dbUser?.name || user.first_name || '',
-            phone: dbUser?.phone || '',
-            email: dbUser?.email || ''
-        }));
     }
   }, [user]);
+
+  // Автозаполнение при включении чекбокса
+  useEffect(() => {
+      if (useSavedData && dbUser) {
+          setContactForm(prev => ({
+              ...prev,
+              name: dbUser.first_name || '',
+              phone: dbUser.phone || '',
+              email: dbUser.email || ''
+          }));
+      }
+  }, [useSavedData, dbUser]);
 
   useEffect(() => {
     const t = setTimeout(() => {
@@ -63,6 +80,8 @@ export default function Cart({ user, dbUser, setActiveTab }) {
     }, 600);
     return () => clearTimeout(t);
   }, [pvzQuery]);
+
+  // --- DATA LOADERS ---
 
   const loadCart = async () => {
     setLoading(true);
@@ -88,16 +107,60 @@ export default function Cart({ user, dbUser, setActiveTab }) {
           const rawData = await res.json();
           let list = [];
           if (Array.isArray(rawData)) list = rawData;
-          else if (rawData?.json && Array.isArray(rawData.json)) list = rawData.json;
-          else if (rawData?.data && Array.isArray(rawData.data)) list = rawData.data;
-          else if (rawData?.rows && Array.isArray(rawData.rows)) list = rawData.rows;
+          else if (rawData?.rows) list = rawData.rows;
           setPvzResults(list);
       } catch (e) { console.error(e); } finally { setLoadingPvz(false); }
   };
 
-  // ... (функции subtotal, updateQuantity, deleteItem, openEditModal, saveItemParams, handlePay - БЕЗ ИЗМЕНЕНИЙ) ...
+  // --- CALCULATIONS ---
+
   const subtotal = useMemo(() => items.reduce((sum, i) => sum + (i.final_price_rub * i.quantity), 0), [items]);
-  const finalTotal = Math.max(0, subtotal - currentDiscount - (parseInt(pointsInput) || 0));
+
+  // Лимит баллов (35% от суммы товаров)
+  const maxAllowedPoints = Math.floor(subtotal * MAX_POINTS_PERCENT);
+  const availablePointsLimit = Math.min(maxAllowedPoints, userPointsBalance);
+
+  // Обработчик ввода баллов с лимитом
+  const handlePointsChange = (val) => {
+      let num = parseInt(val) || 0;
+      if (num < 0) num = 0;
+      if (num > availablePointsLimit) num = availablePointsLimit;
+      
+      setPointsInput(num > 0 ? num.toString() : '');
+      setPointsToUse(num);
+  };
+
+  const handleUseMaxPoints = () => {
+      handlePointsChange(availablePointsLimit);
+  };
+
+  // Заглушка для купонов
+  const handleApplyCoupon = (code) => {
+      if (!code) return;
+      const upperCode = code.toUpperCase();
+      
+      if (upperCode === 'WELCOME') {
+          setCouponDiscount(500);
+          setActiveCoupon('WELCOME');
+          window.Telegram?.WebApp?.showAlert('Купон WELCOME применен! (-500₽)');
+      } else if (upperCode === 'SALE10') {
+          const discount = Math.floor(subtotal * 0.1);
+          setCouponDiscount(discount);
+          setActiveCoupon('SALE10');
+          window.Telegram?.WebApp?.showAlert(`Купон SALE10 применен! (-${discount}₽)`);
+      } else {
+          setCouponDiscount(0);
+          setActiveCoupon(null);
+          window.Telegram?.WebApp?.showAlert('Неверный промокод');
+      }
+      setCouponCode(''); // Очистить поле
+  };
+
+  // ИТОГО
+  const finalTotal = Math.max(0, subtotal - couponDiscount - pointsToUse);
+
+
+  // --- HANDLERS (CRUD) ---
 
   const handleUpdateQuantity = (id, delta) => {
       setItems(prev => prev.map(i => i.id === id ? { ...i, quantity: Math.max(1, i.quantity + delta) } : i));
@@ -118,7 +181,10 @@ export default function Cart({ user, dbUser, setActiveTab }) {
   const saveItemParams = async () => {
       if (!tempSize) { window.Telegram?.WebApp?.showAlert('Выберите размер!'); return; }
       setSavingItem(true);
+      
+      // Обновляем локально
       setItems(prev => prev.map(i => i.id === editingItem.id ? { ...i, size: tempSize, color: tempColor } : i));
+      
       try {
           await fetch('https://proshein.com/webhook/update-cart-item', {
               method: 'POST',
@@ -129,14 +195,23 @@ export default function Cart({ user, dbUser, setActiveTab }) {
       finally { setSavingItem(false); setEditingItem(null); }
   };
 
+
+  // --- PAY & CHECKOUT ---
+
   const handlePay = async () => {
+      // Валидации
       if (items.some(i => i.size === 'NOT_SELECTED' || !i.size)) {
           window.Telegram?.WebApp?.showAlert('Выберите размер для всех товаров!');
           return;
       }
-      if (!contactForm.name || !contactForm.phone) { window.Telegram?.WebApp?.showAlert('Заполните контакты'); return; }
-      if (!contactForm.agreed || !contactForm.customsAgreed) { window.Telegram?.WebApp?.showAlert('Примите соглашения'); return; }
+      if (!contactForm.name || !contactForm.phone) { 
+          window.Telegram?.WebApp?.showAlert('Заполните контакты'); return; 
+      }
+      if (!contactForm.agreed || !contactForm.customsAgreed) { 
+          window.Telegram?.WebApp?.showAlert('Примите соглашения'); return; 
+      }
       
+      // Формируем адрес
       let addressStr = '';
       let pickupInfo = null;
 
@@ -145,38 +220,62 @@ export default function Cart({ user, dbUser, setActiveTab }) {
           addressStr = `5Post: ${selectedPvz.city}, ${selectedPvz.address} (${selectedPvz.name})`;
           pickupInfo = { id: selectedPvz.id, postal_code: selectedPvz.postal_code };
       } else {
-          if (!selectedAddress) { window.Telegram?.WebApp?.showAlert('Выберите адрес'); return; }
-          addressStr = `${selectedAddress.region}, ${selectedAddress.street}`;
+          // Если курьер/почта
+          if (!selectedAddress) { 
+              // Если адрес не выбран из списка, берем тот, что ввел юзер вручную (если будет поле)
+              // Или требуем выбрать. В твоем AddressBlock сейчас выбор из списка.
+              window.Telegram?.WebApp?.showAlert('Выберите адрес доставки'); return; 
+          }
+          addressStr = `${selectedAddress.region}, ${selectedAddress.street}, ${selectedAddress.house}, ${selectedAddress.flat || ''}`;
       }
 
       window.Telegram?.WebApp?.MainButton.showProgress();
+      
       try {
+          const payload = {
+              tg_id: user?.id || 1332986231,
+              user_info: {
+                  name: contactForm.name,
+                  phone: contactForm.phone,
+                  email: contactForm.email,
+                  address: addressStr,
+                  delivery_method: deliveryMethod,
+                  pickup_point_id: pickupInfo?.id,
+                  postal_code: pickupInfo?.postal_code
+              },
+              
+              items: items, // Товары с размерами и цветами
+              
+              // ФИНАНСЫ
+              items_total: subtotal,
+              final_total: finalTotal,
+              
+              // РАЗДЕЛЬНЫЕ СКИДКИ (для базы)
+              points_used: pointsToUse,       
+              coupon_code: activeCoupon,      
+              coupon_discount: couponDiscount,
+              
+              // Для совместимости со старым кодом n8n (если он ждет discount_applied)
+              discount_applied: pointsToUse + couponDiscount 
+          };
+
           const res = await fetch('https://proshein.com/webhook/create-order', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                  tg_id: user?.id || 1332986231,
-                  user_info: {
-                      name: contactForm.name,
-                      phone: contactForm.phone,
-                      email: contactForm.email,
-                      address: addressStr,
-                      delivery_method: deliveryMethod,
-                      pickup_point_id: pickupInfo?.id,
-                      postal_code: pickupInfo?.postal_code
-                  },
-                  final_total: finalTotal,
-                  discount_applied: currentDiscount + (parseInt(pointsInput)||0),
-                  items: items
-              })
+              body: JSON.stringify(payload)
           });
+          
           const json = await res.json();
+          
           if (json.status === 'success') {
               window.Telegram?.WebApp?.showAlert(`Заказ #${json.order_id} оформлен!`);
               setIsCheckoutOpen(false); 
               setItems([]);
-              setActiveTab('home');
-          } else { throw new Error(json.message); }
+              setActiveTab('home'); // Или profile
+          } else { 
+              throw new Error(json.message || 'Ошибка сервера'); 
+          }
+
       } catch (e) {
           window.Telegram?.WebApp?.showAlert('Ошибка: ' + e.message);
       } finally {
@@ -184,7 +283,9 @@ export default function Cart({ user, dbUser, setActiveTab }) {
       }
   };
 
+
   // --- RENDER ---
+  
   return (
     <div className="flex flex-col min-h-screen bg-transparent animate-fade-in pb-32 overflow-y-auto">
       
@@ -198,6 +299,7 @@ export default function Cart({ user, dbUser, setActiveTab }) {
           <div className="text-center text-white/50 mt-10">Корзина пуста</div>
       ) : (
           <div className="px-6 space-y-4">
+              {/* Список товаров */}
               <div className="space-y-3">
                   {items.map(item => (
                       <CartItem 
@@ -212,36 +314,65 @@ export default function Cart({ user, dbUser, setActiveTab }) {
               
               <div className="h-px bg-white/5 my-4"></div>
 
+              {/* Блок оплаты (Баллы и Купоны) */}
               <PaymentBlock 
                   subtotal={subtotal} 
                   total={finalTotal} 
-                  discount={currentDiscount}
+                  
+                  // Скидки
+                  discount={couponDiscount} // Передаем только скидку купона
                   pointsInput={pointsInput}
-                  setPointsInput={setPointsInput}
+                  setPointsInput={(val) => handlePointsChange(val)}
                   userPointsBalance={userPointsBalance}
-                  handleUseMaxPoints={() => setPointsInput(Math.min(userPointsBalance, subtotal * 0.5))}
-                  onOpenCoupons={() => {}} 
+                  handleUseMaxPoints={handleUseMaxPoints}
+                  
+                  // Купоны
+                  onApplyCoupon={handleApplyCoupon} // (Нужно добавить этот проп в PaymentBlock!)
+                  
+                  // UI
                   onPay={() => setIsCheckoutOpen(true)}
-                  onPlayVideo={() => setIsVideoOpen(true)} // <--- Открываем видео
+                  onPlayVideo={() => setIsVideoOpen(true)} 
               />
           </div>
       )}
 
-      {/* ОСТАЛЬНЫЕ МОДАЛКИ (CHECKOUT, EDIT) ... (оставляем как было) */}
+      {/* --- МОДАЛКА ОФОРМЛЕНИЯ (FIXED FULLSCREEN) --- */}
       {isCheckoutOpen && (
           <div className="fixed inset-0 z-50 bg-[#101622] flex flex-col animate-slide-up">
+              {/* Хедер модалки */}
               <div className="flex items-center justify-between p-6 border-b border-white/5 sticky top-0 bg-[#101622] z-10">
-                  <button onClick={() => setIsCheckoutOpen(false)} className="text-white/50">Назад</button>
+                  <button onClick={() => setIsCheckoutOpen(false)} className="text-white/50 flex items-center gap-1">
+                      <span className="material-symbols-outlined text-sm">arrow_back</span> Назад
+                  </button>
                   <h2 className="text-white font-bold">Оформление</h2>
                   <div className="w-10"></div>
               </div>
-              <div className="flex-1 overflow-y-auto p-6 space-y-6">
+              
+              {/* Скроллящийся контент */}
+              <div className="flex-1 overflow-y-auto p-6 space-y-6 pb-24">
+                  
+                  {/* Контакты */}
                   <div className="space-y-3">
-                      <h3 className="text-[10px] uppercase font-bold text-white/50">Получатель</h3>
-                      <input className="custom-input w-full rounded-xl px-4 py-3 text-sm" placeholder="ФИО" value={contactForm.name} onChange={e => setContactForm({...contactForm, name: e.target.value})} />
-                      <input className="custom-input w-full rounded-xl px-4 py-3 text-sm" placeholder="Телефон" type="tel" value={contactForm.phone} onChange={e => setContactForm({...contactForm, phone: e.target.value})} />
-                      <input className="custom-input w-full rounded-xl px-4 py-3 text-sm" placeholder="Email" type="email" value={contactForm.email} onChange={e => setContactForm({...contactForm, email: e.target.value})} />
+                      <div className="flex justify-between items-center">
+                          <h3 className="text-[10px] uppercase font-bold text-white/50">Получатель</h3>
+                          {/* Чекбокс Сохраненные */}
+                          <div 
+                              onClick={() => setUseSavedData(!useSavedData)}
+                              className="flex items-center gap-2 cursor-pointer"
+                          >
+                              <div className={`w-4 h-4 rounded border flex items-center justify-center ${useSavedData ? 'bg-primary border-primary' : 'border-white/30'}`}>
+                                  {useSavedData && <span className="material-symbols-outlined text-[10px] text-black font-bold">check</span>}
+                              </div>
+                              <span className="text-primary text-xs font-bold">Взять из профиля</span>
+                          </div>
+                      </div>
+
+                      <input className="custom-input w-full rounded-xl px-4 py-3 text-sm bg-[#1c2636] border border-white/10 text-white" placeholder="ФИО" value={contactForm.name} onChange={e => setContactForm({...contactForm, name: e.target.value})} />
+                      <input className="custom-input w-full rounded-xl px-4 py-3 text-sm bg-[#1c2636] border border-white/10 text-white" placeholder="Телефон" type="tel" value={contactForm.phone} onChange={e => setContactForm({...contactForm, phone: e.target.value})} />
+                      <input className="custom-input w-full rounded-xl px-4 py-3 text-sm bg-[#1c2636] border border-white/10 text-white" placeholder="Email" type="email" value={contactForm.email} onChange={e => setContactForm({...contactForm, email: e.target.value})} />
                   </div>
+
+                  {/* Адрес и Доставка */}
                   <div className="space-y-3">
                       <h3 className="text-[10px] uppercase font-bold text-white/50">Доставка</h3>
                       <AddressBlock 
@@ -259,25 +390,31 @@ export default function Cart({ user, dbUser, setActiveTab }) {
                           onOpenProfile={() => setActiveTab('profile')}
                       />
                   </div>
+                  
+                  {/* Соглашения */}
                   <div className="space-y-2 pt-2">
-                      <label className="flex gap-3 items-center">
-                          <input type="checkbox" checked={contactForm.agreed} onChange={e => setContactForm({...contactForm, agreed: e.target.checked})} className="rounded bg-white/10 border-white/20 text-primary" />
-                          <span className="text-xs text-white/60">Согласен с офертой</span>
+                      <label className="flex gap-3 items-center cursor-pointer">
+                          <input type="checkbox" checked={contactForm.agreed} onChange={e => setContactForm({...contactForm, agreed: e.target.checked})} className="accent-primary w-4 h-4" />
+                          <span className="text-xs text-white/60">Согласен с условиями оферты</span>
                       </label>
-                      <label className="flex gap-3 items-center">
-                          <input type="checkbox" checked={contactForm.customsAgreed} onChange={e => setContactForm({...contactForm, customsAgreed: e.target.checked})} className="rounded bg-white/10 border-white/20 text-primary" />
-                          <span className="text-xs text-white/60">Паспорт для таможни</span>
+                      <label className="flex gap-3 items-center cursor-pointer">
+                          <input type="checkbox" checked={contactForm.customsAgreed} onChange={e => setContactForm({...contactForm, customsAgreed: e.target.checked})} className="accent-primary w-4 h-4" />
+                          <span className="text-xs text-white/60">Подтверждаю данные для таможни</span>
                       </label>
                   </div>
-                  <div className="pt-4">
-                      <button onClick={handlePay} className="w-full h-14 bg-primary text-[#102216] font-bold rounded-xl text-lg shadow-lg">
-                          Подтвердить {finalTotal.toLocaleString()} ₽
+
+                  {/* Итоговая кнопка */}
+                  <div className="pt-4 pb-10">
+                      <button onClick={handlePay} className="w-full h-14 bg-primary text-[#102216] font-black rounded-xl text-lg shadow-[0_0_20px_rgba(19,236,91,0.3)] active:scale-95 transition-transform">
+                          ОПЛАТИТЬ {finalTotal.toLocaleString()} ₽
                       </button>
+                      <p className="text-center text-white/30 text-[10px] mt-2">Нажимая кнопку, вы подтверждаете заказ</p>
                   </div>
               </div>
           </div>
       )}
 
+      {/* --- МОДАЛКА РЕДАКТИРОВАНИЯ (FIXED CENTERED) --- */}
       {editingItem && (
           <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fade-in" onClick={() => setEditingItem(null)}>
                <div className="bg-[#151c28] w-full max-w-sm rounded-2xl border border-white/10 overflow-hidden flex flex-col shadow-2xl" onClick={e => e.stopPropagation()}>
@@ -290,6 +427,7 @@ export default function Cart({ user, dbUser, setActiveTab }) {
                        <button onClick={() => setEditingItem(null)} className="absolute top-4 right-4 text-white/30 hover:text-white"><span className="material-symbols-outlined text-lg">close</span></button>
                    </div>
                    <div className="p-5 flex-1 space-y-5">
+                       {/* Размер */}
                        <div>
                            <div className="flex justify-between items-center mb-2">
                                <h4 className="text-[10px] uppercase tracking-wider text-white/50 font-bold">Размер</h4>
@@ -306,6 +444,7 @@ export default function Cart({ user, dbUser, setActiveTab }) {
                                })()}
                            </div>
                        </div>
+                       {/* Цвет */}
                        <div>
                            <h4 className="text-[10px] uppercase tracking-wider text-white/50 font-bold mb-2">Цвет</h4>
                            <div className={`w-10 h-10 rounded-full border-2 flex items-center justify-center cursor-pointer transition-all ${tempColor === editingItem.color ? 'border-primary ring-2 ring-primary/30 scale-110' : 'border-white/10'}`} style={{backgroundColor: editingItem.color?.toLowerCase() === 'white' ? '#fff' : editingItem.color}} onClick={() => setTempColor(editingItem.color)}>
