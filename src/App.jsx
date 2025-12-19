@@ -1,41 +1,4 @@
-import { useState, useEffect } from 'react';
-import BottomNav from './components/BottomNav';
-import Home from './pages/Home';
-import Cart from './pages/Cart';
-import Profile from './pages/Profile';
-
-function App() {
-  const [activeTab, setActiveTab] = useState('home');
-  const [tgUser, setTgUser] = useState(null);
-  const [dbUser, setDbUser] = useState(null);
-
-  useEffect(() => {
-    if (typeof window !== 'undefined' && window.Telegram?.WebApp) {
-      const tg = window.Telegram.WebApp;
-      tg.ready();
-      tg.expand();
-      tg.enableClosingConfirmation();
-      
-      const user = tg.initDataUnsafe?.user;
-      const startParam = tg.initDataUnsafe?.start_param;
-
-      if (user) {
-        setTgUser(user);
-        initUserInDB(user, startParam);
-      }
-
-      // Хак для клавиатуры
-      const handleFocus = () => document.body.classList.add('keyboard-open');
-      const handleBlur = () => document.body.classList.remove('keyboard-open');
-      const inputs = document.querySelectorAll('input, textarea');
-      inputs.forEach(input => {
-        input.addEventListener('focus', handleFocus);
-        input.addEventListener('blur', handleBlur);
-      });
-    }
-  }, []);
-
-  const initUserInDB = async (userData, refCode) => {
+const initUserInDB = async (userData, refCode) => {
     if (!userData || !userData.id) return;
 
     try {
@@ -51,56 +14,39 @@ function App() {
                 ref_code: refCode 
             })
         });
-        
-        if (!res.ok) throw new Error(`HTTP Error: ${res.status}`);
 
         const json = await res.json();
+
+        // --- 🚨 ДЕБАГ: ПОКАЖИ МНЕ ДАННЫЕ! ---
+        // Это окно покажет точную структуру, которую видит телефон
+        window.Telegram.WebApp.showAlert(
+            "RAW DATA:\n" + JSON.stringify(json, null, 2).substring(0, 300)
+        );
+        // ------------------------------------
         
-        if (json.status === 'success') {
-            // !!! ВАЖНОЕ ИСПРАВЛЕНИЕ !!!
-            // Если база вернула массив [user], берем user
-            const finalUser = Array.isArray(json.data) ? json.data[0] : json.data;
-            
-            console.log("User Set to State:", finalUser);
-            setDbUser(finalUser);
+        // Попытка угадать структуру (проверка двух вариантов)
+        let finalUser = null;
+
+        // Вариант 1: n8n вернул { status: 'success', data: [...] }
+        if (json.data) {
+             finalUser = Array.isArray(json.data) ? json.data[0] : json.data;
+        } 
+        // Вариант 2: n8n вернул просто массив [...] без обертки
+        else if (Array.isArray(json)) {
+             finalUser = json[0];
         }
+        // Вариант 3: n8n вернул чистый объект {...}
+        else {
+             finalUser = json;
+        }
+
+        if (finalUser) {
+            setDbUser(finalUser);
+        } else {
+            window.Telegram.WebApp.showAlert("Ошибка: Данные юзера не найдены внутри JSON");
+        }
+
     } catch (e) {
-        console.error("Init Error:", e);
+        window.Telegram.WebApp.showAlert("Ошибка fetch: " + e.message);
     }
   };
-
-  // --- НОВАЯ ФУНКЦИЯ ДЛЯ ОБНОВЛЕНИЯ ДАННЫХ ---
-  const handleRefreshData = () => {
-      if (tgUser) {
-          console.log("Refreshing user data...");
-          // Вызываем инициализацию повторно, чтобы получить свежие points и total_spent
-          initUserInDB(tgUser, null); 
-      }
-  };
-
-  return (
-    <div className="min-h-screen bg-luxury-gradient text-white overflow-hidden font-display">
-      <div className="fixed inset-0 pointer-events-none bg-luxury-gradient z-0"></div>
-
-      <div className="relative z-10 pb-24">
-        {activeTab === 'home' && <Home user={tgUser} dbUser={dbUser} setActiveTab={setActiveTab} />}
-        
-        {/* ПЕРЕДАЕМ ФУНКЦИЮ onRefreshData В КОРЗИНУ */}
-        {activeTab === 'cart' && (
-            <Cart 
-                user={tgUser} 
-                dbUser={dbUser} 
-                setActiveTab={setActiveTab} 
-                onRefreshData={handleRefreshData} // <--- ВОТ ЭТО ВАЖНО
-            />
-        )}
-        
-        {activeTab === 'profile' && <Profile user={tgUser} dbUser={dbUser} />}
-      </div>
-
-      <BottomNav activeTab={activeTab} setActiveTab={setActiveTab} />
-    </div>
-  );
-}
-
-export default App;
