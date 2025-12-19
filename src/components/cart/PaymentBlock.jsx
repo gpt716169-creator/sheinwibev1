@@ -9,7 +9,8 @@ export default function PaymentBlock({
     userPointsBalance, 
     handleUseMaxPoints, 
     onOpenCoupons, 
-    onPay 
+    onPay,
+    onPlayVideo // <--- Новая функция
 }) {
   return (
     <div className="space-y-4">
@@ -31,8 +32,8 @@ export default function PaymentBlock({
             </div>
         </div>
 
-        {/* Инфо о таможне */}
-        <div onClick={() => window.Telegram?.WebApp?.openLink('https://youtube.com/shorts/placeholder')} className="bg-blue-500/10 border border-blue-500/20 rounded-xl p-3 flex items-center gap-3 cursor-pointer hover:bg-blue-500/20 transition-colors">
+        {/* --- ВИДЕО КНОПКА --- */}
+        <div onClick={onPlayVideo} className="bg-blue-500/10 border border-blue-500/20 rounded-xl p-3 flex items-center gap-3 cursor-pointer hover:bg-blue-500/20 transition-colors">
             <div className="w-8 h-8 rounded-full bg-blue-500/20 flex items-center justify-center text-blue-400">
                 <span className="material-symbols-outlined text-[18px]">play_circle</span>
             </div>
@@ -42,8 +43,8 @@ export default function PaymentBlock({
             </div>
             <span className="material-symbols-outlined text-white/30 text-[16px]">chevron_right</span>
         </div>
+        {/* ------------------- */}
 
-        {/* Итого */}
         <div className="p-5 rounded-2xl bg-white/5 border border-white/5 space-y-3">
             <div className="flex justify-between items-center text-sm"><span className="text-white/60">Товары</span><span className="text-white font-medium">{subtotal.toLocaleString()} ₽</span></div>
             {(discount > 0 || parseInt(pointsInput) > 0) && (
@@ -57,7 +58,6 @@ export default function PaymentBlock({
             <div className="flex justify-between items-center"><span className="text-white font-semibold text-lg">Итого</span><span className="text-2xl font-bold text-primary">{total.toLocaleString()} ₽</span></div>
         </div>
         
-        {/* Кнопка Оплатить */}
         <button 
             onClick={onPay}
             className="w-full h-14 bg-gradient-to-r from-emerald-600 to-emerald-800 rounded-xl flex items-center justify-center gap-3 text-white font-bold text-lg shadow-[0_0_25px_rgba(5,150,105,0.4)] active:scale-[0.98] transition-transform"
