@@ -4,8 +4,8 @@ import PaymentBlock from '../components/cart/PaymentBlock';
 import FullScreenVideo from '../components/ui/FullScreenVideo';
 import EditItemModal from '../components/cart/EditItemModal';
 import CheckoutModal from '../components/cart/CheckoutModal';
-
-export default function Cart({ user, dbUser, setActiveTab }) {
+// Добавь onRefreshData в аргументы
+export default function Cart({ user, dbUser, setActiveTab, onRefreshData }) {
   // --- STATE: DATA ---
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
