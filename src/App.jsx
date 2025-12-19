@@ -19,19 +19,22 @@ function App() {
       tg.expand();
       tg.enableClosingConfirmation();
       
-      // Получаем РЕАЛЬНЫЕ данные. Никаких заглушек.
+      // Получаем РЕАЛЬНЫЕ данные
       const user = tg.initDataUnsafe?.user;
+      
+      // !!! ВАЖНО: Получаем реферальный параметр (start_param)
+      // Если юзер перешел по t.me/bot?start=ref_12345, здесь будет "ref_12345"
+      const startParam = tg.initDataUnsafe?.start_param;
 
       if (user) {
         setTgUser(user);
-        // Инициализируем в базе
-        initUserInDB(user);
+        // Инициализируем в базе, передавая реф. код
+        initUserInDB(user, startParam);
       } else {
-        // Если открыто не в Телеграме или данные не пришли
         console.warn("Нет данных пользователя Telegram. Webhook не будет отправлен.");
       }
 
-      // Хак для клавиатуры
+      // Хак для клавиатуры (чтобы инпуты не перекрывались)
       const handleFocus = () => document.body.classList.add('keyboard-open');
       const handleBlur = () => document.body.classList.remove('keyboard-open');
       const inputs = document.querySelectorAll('input, textarea');
@@ -42,11 +45,11 @@ function App() {
     }
   }, []);
 
-  const initUserInDB = async (userData) => {
-    // Проверка на всякий случай
+  const initUserInDB = async (userData, refCode) => {
     if (!userData || !userData.id) return;
 
     try {
+        // Отправляем запрос на регистрацию/обновление пользователя
         const res = await fetch('https://proshein.com/webhook/init-user', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -55,7 +58,8 @@ function App() {
                 first_name: userData.first_name,
                 username: userData.username,
                 language_code: userData.language_code,
-                is_premium: userData.is_premium
+                is_premium: userData.is_premium,
+                ref_code: refCode // <--- Отправляем код пригласившего в n8n
             })
         });
         
@@ -73,8 +77,6 @@ function App() {
         }
     } catch (e) {
         console.error("Ошибка авторизации (Network/CORS):", e);
-        // Можно включить алерт для отладки, если совсем тишина
-        // window.Telegram?.WebApp?.showAlert(`Ошибка init-user: ${e.message}`);
     }
   };
 
