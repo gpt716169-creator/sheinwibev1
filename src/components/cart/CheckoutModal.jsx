@@ -4,14 +4,14 @@ import AddressBlock from './AddressBlock';
 
 export default function CheckoutModal({ 
   onClose, user, dbUser, total, items, pointsUsed, couponDiscount, activeCoupon,
-  // Адреса
+  // Пропсы
   addresses, deliveryMethod, setDeliveryMethod,
   selectedAddress, setSelectedAddress,
   selectedPvz, setSelectedPvz,
-  // Действия
   onManageAddresses
 }) {
 
+  // Форма существует в памяти, но скрыта от глаз
   const [form, setForm] = useState({ name: '', phone: '', email: '', agreed: false, customsAgreed: false });
   const [loading, setLoading] = useState(false);
 
@@ -20,6 +20,8 @@ export default function CheckoutModal({
     return () => document.body.style.overflow = 'auto';
   }, []);
 
+  // АВТОЗАПОЛНЕНИЕ (Скрытое)
+  // Когда в AddressBlock выбирают адрес, эта функция обновляет скрытую форму
   const handleAddressSelect = (addr) => {
       if (addr) {
           setForm(prev => ({
@@ -32,26 +34,33 @@ export default function CheckoutModal({
   };
 
   const handlePay = async () => {
-     // Валидация
-     if (!form.name || form.name.length < 2) { window.Telegram?.WebApp?.showAlert('Введите ФИО получателя'); return; }
-     if (!form.phone || form.phone.length < 5) { window.Telegram?.WebApp?.showAlert('Введите номер телефона'); return; }
-     if (!form.agreed || !form.customsAgreed) { window.Telegram?.WebApp?.showAlert('Примите соглашения'); return; }
+     // Проверяем, выбрал ли юзер адрес (если выбрал - данные контактов там уже есть)
+     if (deliveryMethod === 'ПВЗ (5Post)' && !selectedPvz) {
+         window.Telegram?.WebApp?.showAlert('Выберите магазин 5Post из списка'); return;
+     }
+     if (deliveryMethod !== 'ПВЗ (5Post)' && !selectedAddress) {
+         window.Telegram?.WebApp?.showAlert('Выберите адрес доставки из списка'); return;
+     }
+
+     // Валидация контактов (на случай если в сохраненном адресе их почему-то нет)
+     if (!form.name || form.name.length < 2) { 
+         window.Telegram?.WebApp?.showAlert('В выбранном адресе не указано ФИО получателя. Исправьте это в профиле.'); return; 
+     }
+     if (!form.phone) { 
+         window.Telegram?.WebApp?.showAlert('В выбранном адресе не указан телефон. Исправьте это в профиле.'); return; 
+     }
+
+     if (!form.agreed || !form.customsAgreed) {
+         window.Telegram?.WebApp?.showAlert('Примите условия оферты и таможни'); return;
+     }
 
      let finalAddress = '';
      let pickupInfo = null;
 
      if (deliveryMethod === 'ПВЗ (5Post)') {
-         if (!selectedPvz) {
-             window.Telegram?.WebApp?.showAlert('Выберите сохраненный магазин 5Post или добавьте его в профиле');
-             return;
-         }
          finalAddress = `5Post: ${selectedPvz.city}, ${selectedPvz.address}`;
          pickupInfo = { id: selectedPvz.id, postal_code: '000000' };
      } else {
-         if (!selectedAddress) {
-             window.Telegram?.WebApp?.showAlert('Выберите сохраненный адрес доставки или добавьте его в профиле');
-             return;
-         }
          finalAddress = [selectedAddress.region, selectedAddress.city, selectedAddress.street, selectedAddress.house, selectedAddress.flat].filter(Boolean).join(', ');
      }
 
@@ -111,28 +120,20 @@ export default function CheckoutModal({
       {/* Контент */}
       <div className="flex-1 overflow-y-auto p-5 pb-32 space-y-6">
          
+         {/* ДОСТАВКА (ЕДИНСТВЕННЫЙ БЛОК ВЫБОРА) */}
          <section className="space-y-3">
-             <h3 className="text-[10px] uppercase font-bold text-white/50 tracking-wider">Контакты получателя</h3>
-             <div className="space-y-3">
-                <input value={form.name} onChange={e => setForm({...form, name: e.target.value})} placeholder="ФИО Получателя" className="custom-input w-full bg-[#1c2636] border border-white/10 text-white rounded-xl px-4 py-3 text-sm focus:border-primary outline-none" />
-                <input value={form.phone} onChange={e => setForm({...form, phone: e.target.value})} type="tel" placeholder="Телефон (+7...)" className="custom-input w-full bg-[#1c2636] border border-white/10 text-white rounded-xl px-4 py-3 text-sm focus:border-primary outline-none" />
-                <input value={form.email} onChange={e => setForm({...form, email: e.target.value})} type="email" placeholder="Email (для чека)" className="custom-input w-full bg-[#1c2636] border border-white/10 text-white rounded-xl px-4 py-3 text-sm focus:border-primary outline-none" />
-             </div>
-         </section>
-
-         <section className="space-y-3">
-             <h3 className="text-[10px] uppercase font-bold text-white/50 tracking-wider">Способ доставки</h3>
+             <h3 className="text-[10px] uppercase font-bold text-white/50 tracking-wider">Куда доставить?</h3>
              <AddressBlock 
                  deliveryMethod={deliveryMethod} setDeliveryMethod={setDeliveryMethod}
                  addresses={addresses} 
                  selectedAddress={selectedAddress} setSelectedAddress={setSelectedAddress}
                  selectedPvz={selectedPvz} setSelectedPvz={setSelectedPvz}
-                 // Переход в адреса
                  onManageAddresses={onManageAddresses}
-                 onFillFromAddress={handleAddressSelect} 
+                 onFillFromAddress={handleAddressSelect} // <-- Данные улетают в скрытую форму
              />
          </section>
 
+         {/* Соглашения */}
          <section className="space-y-3 pt-2">
              <label className="flex gap-3 items-center cursor-pointer group select-none">
                  <input type="checkbox" checked={form.agreed} onChange={e => setForm({...form, agreed: e.target.checked})} className="w-5 h-5 rounded border-white/30 bg-white/5 checked:bg-primary checked:border-primary appearance-none transition-colors" />
@@ -145,6 +146,7 @@ export default function CheckoutModal({
          </section>
       </div>
 
+      {/* Кнопка Оплаты */}
       <div className="absolute bottom-0 left-0 right-0 p-5 bg-[#101622] border-t border-white/5 pb-safe-bottom z-20">
           <button onClick={handlePay} disabled={loading} className="w-full h-14 bg-primary text-[#102216] font-black rounded-xl text-lg uppercase shadow-[0_0_20px_rgba(19,236,91,0.3)] active:scale-95 transition-transform flex items-center justify-center gap-2">
             {loading ? <span className="material-symbols-outlined animate-spin">progress_activity</span> : `Оплатить ${total.toLocaleString()} ₽`}
