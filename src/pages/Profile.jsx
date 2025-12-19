@@ -1,98 +1,165 @@
 import React, { useState, useEffect } from 'react';
-
-// Импортируй свои компоненты, если они вынесены
-// import MyAddresses from '../components/profile/MyAddresses'; 
-// import OrderHistory from '../components/profile/OrderHistory';
+import ProfileHeader from '../components/profile/ProfileHeader';
+import OrdersTab from '../components/profile/OrdersTab';
+import AddressesTab from '../components/profile/AddressesTab';
+import ReferralTab from '../components/profile/ReferralTab';
+import OrderDetailsModal from '../components/profile/OrderDetailsModal';
+import AddressModal from '../components/profile/AddressModal';
 
 export default function Profile({ user, dbUser }) {
-  const [activeTab, setActiveTab] = useState('main'); // 'main', 'addresses', 'orders', 'support'
+  // --- STATE ---
+  const [activeTab, setActiveTab] = useState('orders'); 
+  
+  const [orders, setOrders] = useState([]);
+  const [addresses, setAddresses] = useState([]);
+  const [loadingData, setLoadingData] = useState(false);
+  
+  // Modals
+  const [selectedOrder, setSelectedOrder] = useState(null);
+  const [isAddressModalOpen, setIsAddressModalOpen] = useState(false);
+  const [editingAddress, setEditingAddress] = useState(null);
 
-  // --- ЛОГИКА АВТО-ПЕРЕХОДА ИЗ КОРЗИНЫ ---
+  // --- НОВАЯ ЛОГИКА: ПЕРЕХОД ИЗ КОРЗИНЫ ---
   useEffect(() => {
     const redirectTab = sessionStorage.getItem('open_profile_tab');
     if (redirectTab === 'addresses') {
         setActiveTab('addresses');
-        sessionStorage.removeItem('open_profile_tab'); // Очищаем, чтобы не прыгало постоянно
+        sessionStorage.removeItem('open_profile_tab'); // Очищаем флаг
     }
   }, []);
+  // ----------------------------------------
 
-  // --- РЕНДЕР КОНТЕНТА В ЗАВИСИМОСТИ ОТ ТАБА ---
-  const renderContent = () => {
-      switch (activeTab) {
-          case 'addresses':
-              return (
-                  <div className="animate-fade-in">
-                      {/* Кнопка Назад */}
-                      <button onClick={() => setActiveTab('main')} className="mb-4 flex items-center gap-1 text-white/50 text-sm">
-                          <span className="material-symbols-outlined text-lg">arrow_back</span> Назад в профиль
-                      </button>
-                      <h2 className="text-white font-bold text-xl mb-4">Мои Адреса</h2>
-                      
-                      {/* ТУТ ТВОЙ КОМПОНЕНТ УПРАВЛЕНИЯ АДРЕСАМИ */}
-                      {/* <MyAddresses user={user} /> */}
-                      <div className="p-4 bg-white/5 rounded-xl text-center text-white/50">
-                          Тут будет список адресов и кнопка добавления
-                      </div>
-                  </div>
-              );
-          
-          case 'orders':
-              return (
-                  <div className="animate-fade-in">
-                      <button onClick={() => setActiveTab('main')} className="mb-4 flex items-center gap-1 text-white/50 text-sm">
-                          <span className="material-symbols-outlined text-lg">arrow_back</span> Назад
-                      </button>
-                      <h2 className="text-white font-bold text-xl mb-4">Мои Заказы</h2>
-                      {/* <OrderHistory user={user} /> */}
-                  </div>
-              );
+  // --- LOAD DATA ---
+  useEffect(() => {
+    if (user?.id) {
+        loadOrders();
+        loadAddresses();
+    }
+  }, [user]);
 
-          case 'main':
-          default:
-              return (
-                <div className="space-y-6 animate-fade-in">
-                    {/* Аватар и Инфо */}
-                    <div className="flex items-center gap-4">
-                        <div className="w-16 h-16 rounded-full bg-primary/20 flex items-center justify-center text-primary font-bold text-2xl border border-primary/30">
-                            {user?.first_name?.[0] || 'U'}
-                        </div>
-                        <div>
-                            <h2 className="text-white font-bold text-lg">{user?.first_name} {user?.last_name}</h2>
-                            <p className="text-primary font-mono text-sm">{dbUser?.points || 0} WIBE</p>
-                        </div>
-                    </div>
+  const loadOrders = async () => {
+      try {
+          const res = await fetch(`https://proshein.com/webhook/get-orders?tg_id=${user.id}`);
+          const json = await res.json();
+          setOrders(json.orders || json.items || []);
+      } catch (e) { console.error(e); }
+  };
 
-                    {/* Меню */}
-                    <div className="grid grid-cols-2 gap-3">
-                        <button onClick={() => setActiveTab('orders')} className="bg-[#1c2636] p-4 rounded-2xl border border-white/5 flex flex-col gap-2 hover:border-white/20 transition-all">
-                            <span className="material-symbols-outlined text-white text-2xl">receipt_long</span>
-                            <span className="text-white font-bold text-sm">Мои заказы</span>
-                        </button>
-                        <button onClick={() => setActiveTab('addresses')} className="bg-[#1c2636] p-4 rounded-2xl border border-white/5 flex flex-col gap-2 hover:border-white/20 transition-all">
-                            <span className="material-symbols-outlined text-white text-2xl">location_on</span>
-                            <span className="text-white font-bold text-sm">Мои адреса</span>
-                        </button>
-                    </div>
+  const loadAddresses = async () => {
+      setLoadingData(true);
+      try {
+          const res = await fetch(`https://proshein.com/webhook/get-addresses?tg_id=${user.id}`);
+          const json = await res.json();
+          setAddresses(json.addresses || []);
+      } catch (e) { console.error(e); }
+      finally { setLoadingData(false); }
+  };
 
-                    {/* Доп. инфо */}
-                    <div className="space-y-2">
-                        <div className="bg-[#1c2636] p-4 rounded-2xl border border-white/5 flex justify-between items-center">
-                            <span className="text-white/70 text-sm">Техподдержка</span>
-                            <span className="material-symbols-outlined text-white/30">chevron_right</span>
-                        </div>
-                        <div className="bg-[#1c2636] p-4 rounded-2xl border border-white/5 flex justify-between items-center">
-                             <span className="text-white/70 text-sm">Оферта</span>
-                             <span className="material-symbols-outlined text-white/30">chevron_right</span>
-                        </div>
-                    </div>
-                </div>
-              );
+  // --- HANDLERS ---
+  const handleSaveAddress = async (addressData) => {
+      window.Telegram?.WebApp?.MainButton.showProgress();
+      try {
+          const res = await fetch('https://proshein.com/webhook/save-address', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                  tg_id: user.id,
+                  address: addressData 
+              })
+          });
+          const json = await res.json();
+          if (json.status === 'success') {
+              window.Telegram?.WebApp?.HapticFeedback.notificationOccurred('success');
+              setIsAddressModalOpen(false);
+              setEditingAddress(null);
+              loadAddresses(); 
+          } else {
+              window.Telegram?.WebApp?.showAlert("Ошибка: " + json.message);
+          }
+      } catch (e) {
+          window.Telegram?.WebApp?.showAlert("Ошибка сохранения");
+      } finally {
+          window.Telegram?.WebApp?.MainButton.hideProgress();
       }
   };
 
+  const handleDeleteAddress = async (addressId, e) => {
+      e.stopPropagation();
+      if(!window.confirm("Вы точно хотите удалить этот адрес?")) return;
+      
+      const newAddresses = addresses.filter(a => a.id !== addressId);
+      setAddresses(newAddresses);
+
+      try {
+          await fetch('https://proshein.com/webhook/delete-address', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ id: addressId, tg_id: user.id })
+          });
+      } catch (e) { 
+          console.error("Delete error:", e);
+          loadAddresses();
+      }
+  };
+
+  const openNewAddress = () => {
+      setEditingAddress(null);
+      setIsAddressModalOpen(true);
+  };
+
+  const openEditAddress = (addr) => {
+      setEditingAddress(addr);
+      setIsAddressModalOpen(true);
+  };
+
+  // --- RENDER ---
   return (
-    <div className="p-6 pb-32 min-h-screen">
-        {renderContent()}
+    <div className="flex flex-col h-screen pb-24 animate-fade-in overflow-y-auto">
+        
+        {/* HEADER */}
+        <ProfileHeader user={user} dbUser={dbUser} />
+
+        {/* TABS */}
+        <div className="px-6 mb-6 shrink-0">
+            <div className="flex bg-white/5 p-1 rounded-xl border border-white/5">
+                <button onClick={() => setActiveTab('orders')} className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all ${activeTab === 'orders' ? 'bg-white/10 text-white shadow-sm' : 'text-white/40'}`}>Заказы</button>
+                <button onClick={() => setActiveTab('addresses')} className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all ${activeTab === 'addresses' ? 'bg-white/10 text-white shadow-sm' : 'text-white/40'}`}>Адреса</button>
+                <button onClick={() => setActiveTab('referral')} className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all ${activeTab === 'referral' ? 'bg-white/10 text-white shadow-sm' : 'text-white/40'}`}>Друзья</button>
+            </div>
+        </div>
+
+        {/* CONTENT */}
+        {activeTab === 'orders' && (
+            <OrdersTab orders={orders} onSelectOrder={setSelectedOrder} />
+        )}
+
+        {activeTab === 'addresses' && (
+            <AddressesTab 
+                addresses={addresses} 
+                loading={loadingData} 
+                onAdd={openNewAddress} 
+                onEdit={openEditAddress} 
+                onDelete={handleDeleteAddress} 
+            />
+        )}
+
+        {activeTab === 'referral' && (
+            <ReferralTab userId={user?.id} />
+        )}
+
+        {/* MODALS */}
+        <OrderDetailsModal 
+            order={selectedOrder} 
+            onClose={() => setSelectedOrder(null)} 
+        />
+        
+        <AddressModal 
+            isOpen={isAddressModalOpen} 
+            onClose={() => setIsAddressModalOpen(false)} 
+            editingAddress={editingAddress} 
+            user={user} 
+            onSave={handleSaveAddress} 
+        />
     </div>
   );
 }
