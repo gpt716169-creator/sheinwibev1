@@ -12,8 +12,9 @@ export default function CheckoutModal({
   onOpenProfile
 }) {
 
+  // Инициализируем форму пустыми значениями
+  // (Данные подставятся сами, когда юзер кликнет на сохраненный адрес в AddressBlock)
   const [form, setForm] = useState({ name: '', phone: '', email: '', agreed: false, customsAgreed: false });
-  const [useSavedData, setUseSavedData] = useState(false);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -21,37 +22,20 @@ export default function CheckoutModal({
     return () => document.body.style.overflow = 'auto';
   }, []);
 
-  // 1. ЛОГИКА "ВЗЯТЬ ИЗ ПРОФИЛЯ" (Чекбокс)
-  useEffect(() => {
-    if (useSavedData) {
-        // Логика остается для подстраховки, если адрес не выбран
-        const name = dbUser?.first_name || dbUser?.name || user?.first_name || '';
-        const phone = dbUser?.phone || '';
-        const email = dbUser?.email || '';
-        setForm(prev => ({ ...prev, name, phone, email }));
-    }
-  }, [useSavedData, dbUser, user]);
-
-  // 2. НОВАЯ ФУНКЦИЯ: ЗАПОЛНИТЬ ИЗ АДРЕСА
-  // Эту функцию мы передадим в AddressBlock
+  // Функция, которая принимает данные из AddressBlock при клике на сохраненный адрес
   const handleAddressSelect = (addr) => {
-      console.log("Выбран адрес с данными:", addr);
       if (addr) {
           setForm(prev => ({
               ...prev,
-              // Если в адресе есть имя/телефон - берем их. Если нет - оставляем что было.
               name: addr.full_name || prev.name,
               phone: addr.phone || prev.phone,
               email: addr.email || prev.email
           }));
-          // Автоматически ставим галочку, что данные взяты (визуально приятно)
-          if (addr.full_name && addr.phone) {
-             // Можно включить или не включать useSavedData, но лучше просто заполнить форму
-          }
       }
   };
 
   const handlePay = async () => {
+     // 1. Валидация контактов
      if (!form.name || form.name.length < 2) { 
          window.Telegram?.WebApp?.showAlert('Введите ФИО получателя'); return; 
      }
@@ -62,20 +46,32 @@ export default function CheckoutModal({
          window.Telegram?.WebApp?.showAlert('Примите условия оферты и таможни'); return;
      }
 
+     // 2. Сбор адреса
      let finalAddress = '';
      let pickupInfo = null;
 
      if (deliveryMethod === 'ПВЗ (5Post)') {
-         if (!selectedPvz) {
-             window.Telegram?.WebApp?.showAlert('Выберите пункт выдачи 5Post'); return;
+         // ЛОГИКА ИЗМЕНЕНА:
+         // Если выбран сохраненный пункт (selectedPvz) - берем его.
+         // Если нет, берем то, что юзер написал руками в поле (pvzQuery).
+         if (selectedPvz) {
+             finalAddress = `5Post: ${selectedPvz.city}, ${selectedPvz.address} (${selectedPvz.name})`;
+             pickupInfo = { id: selectedPvz.id, postal_code: selectedPvz.postal_code };
+         } else if (pvzQuery && pvzQuery.length > 5) {
+             // Ручной ввод
+             finalAddress = `5Post (Ручной ввод): ${pvzQuery}`;
+             pickupInfo = null; // ID нет, так как введено руками
+         } else {
+             window.Telegram?.WebApp?.showAlert('Укажите адрес магазина Пятерочка');
+             return;
          }
-         finalAddress = `5Post: ${selectedPvz.city}, ${selectedPvz.address} (${selectedPvz.name})`;
-         pickupInfo = { id: selectedPvz.id, postal_code: selectedPvz.postal_code };
      } else {
+         // Почта России
          if (selectedAddress) {
              finalAddress = [selectedAddress.region, selectedAddress.city, selectedAddress.street, selectedAddress.house, selectedAddress.flat].filter(Boolean).join(', ');
          } else {
-             window.Telegram?.WebApp?.showAlert('Выберите адрес доставки'); return;
+             window.Telegram?.WebApp?.showAlert('Выберите сохраненный адрес или добавьте новый в профиле');
+             return;
          }
      }
 
@@ -135,18 +131,9 @@ export default function CheckoutModal({
       {/* Контент */}
       <div className="flex-1 overflow-y-auto p-5 pb-32 space-y-6">
          
-         {/* КОНТАКТЫ */}
+         {/* КОНТАКТЫ (Кнопка "Взять из профиля" удалена) */}
          <section className="space-y-3">
-             <div className="flex justify-between items-center">
-                 <h3 className="text-[10px] uppercase font-bold text-white/50 tracking-wider">Контакты получателя</h3>
-                 <div onClick={() => setUseSavedData(!useSavedData)} className="flex items-center gap-2 cursor-pointer active:opacity-70">
-                     <div className={`w-4 h-4 rounded border flex items-center justify-center transition-colors ${useSavedData ? 'bg-primary border-primary' : 'border-white/30'}`}>
-                         {useSavedData && <span className="material-symbols-outlined text-[10px] text-black font-bold">check</span>}
-                     </div>
-                     <span className="text-primary text-xs font-bold">Взять из профиля</span>
-                 </div>
-             </div>
-
+             <h3 className="text-[10px] uppercase font-bold text-white/50 tracking-wider">Контакты получателя</h3>
              <div className="space-y-3">
                 <input value={form.name} onChange={e => setForm({...form, name: e.target.value})} placeholder="ФИО Получателя" className="custom-input w-full bg-[#1c2636] border border-white/10 text-white rounded-xl px-4 py-3 text-sm focus:border-primary outline-none" />
                 <input value={form.phone} onChange={e => setForm({...form, phone: e.target.value})} type="tel" placeholder="Телефон (+7...)" className="custom-input w-full bg-[#1c2636] border border-white/10 text-white rounded-xl px-4 py-3 text-sm focus:border-primary outline-none" />
@@ -158,15 +145,12 @@ export default function CheckoutModal({
          <section className="space-y-3">
              <h3 className="text-[10px] uppercase font-bold text-white/50 tracking-wider">Способ доставки</h3>
              
-             {/* ПЕРЕДАЕМ НОВУЮ ФУНКЦИЮ ВНИЗ */}
              <AddressBlock 
                  deliveryMethod={deliveryMethod} setDeliveryMethod={setDeliveryMethod}
                  addresses={addresses} selectedAddress={selectedAddress} setSelectedAddress={setSelectedAddress}
                  pvzQuery={pvzQuery} setPvzQuery={setPvzQuery} pvzResults={pvzResults}
                  selectedPvz={selectedPvz} setSelectedPvz={setSelectedPvz} loadingPvz={loadingPvz}
                  onOpenProfile={onOpenProfile}
-                 
-                 // ВОТ ОНА:
                  onFillFromAddress={handleAddressSelect} 
              />
          </section>
