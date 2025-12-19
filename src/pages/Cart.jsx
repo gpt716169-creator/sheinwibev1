@@ -76,7 +76,37 @@ export default function Cart({ user, dbUser, setActiveTab, onRefreshData }) {
       setActiveTab('profile');
   };
 
-  const handleUpdateQuantity = (id, delta) => setItems(prev => prev.map(i => i.id === id ? { ...i, quantity: Math.max(1, i.quantity + delta) } : i));
+  // ОБНОВЛЕННАЯ ФУНКЦИЯ ИЗМЕНЕНИЯ КОЛИЧЕСТВА
+  const handleUpdateQuantity = async (id, delta) => {
+      // 1. Ищем товар в текущем списке
+      const currentItem = items.find(i => i.id === id);
+      if (!currentItem) return;
+
+      // 2. Считаем новое количество (не меньше 1)
+      const newQty = Math.max(1, currentItem.quantity + delta);
+      if (newQty === currentItem.quantity) return; // Если не изменилось, выходим
+
+      // 3. Мгновенно обновляем экран (чтобы не тупило)
+      setItems(prev => prev.map(i => i.id === id ? { ...i, quantity: newQty } : i));
+
+      // 4. Тихо отправляем данные на сервер
+      try {
+          await fetch('https://proshein.com/webhook/update-cart-item', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ 
+                  id, 
+                  quantity: newQty,
+                  // Важно: отправляем текущие размер и цвет, чтобы n8n их не стер
+                  size: currentItem.size, 
+                  color: currentItem.color,
+                  tg_id: user?.id 
+              })
+          });
+      } catch (e) {
+          console.error("Ошибка сохранения количества:", e);
+      }
+  };
   
   const handleDeleteItem = async (e, id) => {
       if(!window.confirm('Удалить товар?')) return;
