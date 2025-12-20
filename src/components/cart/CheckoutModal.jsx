@@ -141,7 +141,7 @@ export default function CheckoutModal({
              </label>
              <label className="flex gap-3 items-center cursor-pointer group select-none">
                  <input type="checkbox" checked={form.customsAgreed} onChange={e => setForm({...form, customsAgreed: e.target.checked})} className="w-5 h-5 rounded border-white/30 bg-white/5 checked:bg-primary checked:border-primary appearance-none transition-colors" />
-                 <span className="text-xs text-white/60">Паспорт для таможни (через СДЭК)</span>
+                 <span className="text-xs text-white/60">Предоставлю данные для таможни</span>
              </label>
          </section>
       </div>
