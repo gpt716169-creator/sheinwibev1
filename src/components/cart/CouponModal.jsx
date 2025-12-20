@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 
 export default function CouponModal({ userId, subtotal, onClose, onApply, activeCouponCode }) {
     const [coupons, setCoupons] = useState([]);
