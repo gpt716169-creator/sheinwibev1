@@ -24,8 +24,8 @@ export default function OrdersTab({ orders = [] }) {
 
     // Проверяем с конца (от самого долгого к началу)
     if (diffMinutes >= 8 * 24 * 60) return { text: 'Таможня', color: 'text-blue-400 bg-blue-400/10' };
-    if (diffMinutes >= 7 * 24 * 60) return { text: 'На складе РФ', color: 'text-indigo-400 bg-indigo-400/10' };
-    if (diffMinutes >= 3 * 24 * 60) return { text: 'В пути в РФ', color: 'text-purple-400 bg-purple-400/10' };
+    if (diffMinutes >= 7 * 24 * 60) return { text: 'На складе SW', color: 'text-indigo-400 bg-indigo-400/10' };
+    if (diffMinutes >= 3 * 24 * 60) return { text: 'В пути', color: 'text-purple-400 bg-purple-400/10' };
     if (diffMinutes >= 2 * 24 * 60) return { text: 'Отправлен SHEIN', color: 'text-purple-400 bg-purple-400/10' };
     if (diffMinutes >= 1 * 24 * 60) return { text: 'Сборка', color: 'text-yellow-400 bg-yellow-400/10' };
     if (diffMinutes >= 15) return { text: 'Выкуплен', color: 'text-emerald-400 bg-emerald-400/10' };
