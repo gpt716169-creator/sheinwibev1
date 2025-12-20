@@ -4,16 +4,17 @@ import ActiveOrders from '../components/home/ActiveOrders';
 import LoyaltyCard from '../components/home/LoyaltyCard';
 import LoyaltyModal from '../components/home/LoyaltyModal';
 import FullScreenVideo from '../components/ui/FullScreenVideo'; 
+import ReviewsBanner from '../components/home/ReviewsBanner'; // <--- Импортируем новый компонент
 
 export default function Home({ user, dbUser, setActiveTab }) {
   const [activeOrders, setActiveOrders] = useState([]);
   const [isLoyaltyModalOpen, setIsLoyaltyModalOpen] = useState(false);
-  
+   
   // Состояние для видео-инструкции
   const [isTutorialOpen, setIsTutorialOpen] = useState(false);
 
   const TUTORIAL_VIDEO_URL = "https://storage.yandexcloud.net/videosheinwibe/vkclips_20251219084052.mp4";
-  
+   
   // Ссылка на VPN
   const VPN_LINK = "https://t.me/hitvpnbot?start=187358585644246";
 
@@ -40,7 +41,7 @@ export default function Home({ user, dbUser, setActiveTab }) {
               body: JSON.stringify({ link, tg_id: user?.id })
           });
           const json = await res.json();
-          
+           
           if (json.status === 'success') {
               window.Telegram?.WebApp?.HapticFeedback.notificationOccurred('success');
               window.Telegram?.WebApp?.showAlert('Товар добавлен в корзину!');
@@ -94,11 +95,17 @@ export default function Home({ user, dbUser, setActiveTab }) {
                 onGoToOrders={() => setActiveTab('profile')} 
             />
 
+            {/* 4. БАННЕР ОТЗЫВОВ (Новое место) */}
+            {/* Вставляем прямо здесь, чтобы разделить заказы и блок помощи */}
+            <div className="-mt-2"> 
+                <ReviewsBanner />
+            </div>
+
             {/* ГРУППА ПОМОЩИ (ВИДЕО + VPN) */}
             <div className="space-y-3">
                 <h3 className="text-white font-bold text-sm uppercase tracking-wider ml-1 opacity-50">Помощь</h3>
                 
-                {/* 4. ВИДЕО */}
+                {/* 5. ВИДЕО */}
                 <div 
                     onClick={() => setIsTutorialOpen(true)} 
                     className="bg-white/5 border border-white/5 rounded-2xl p-4 flex items-center gap-4 cursor-pointer hover:bg-white/10 transition-colors active:scale-[0.98]"
@@ -114,7 +121,7 @@ export default function Home({ user, dbUser, setActiveTab }) {
                     <span className="material-symbols-outlined text-white/20">chevron_right</span>
                 </div>
 
-                {/* 5. VPN БАННЕР */}
+                {/* 6. VPN БАННЕР */}
                 <div 
                     onClick={openVpn} 
                     className="bg-[#1e2a4a]/40 border border-blue-500/20 rounded-2xl p-4 flex items-center gap-4 cursor-pointer hover:bg-[#1e2a4a]/60 transition-colors active:scale-[0.98]"
