@@ -4,13 +4,13 @@ import PaymentBlock from '../components/cart/PaymentBlock';
 import FullScreenVideo from '../components/ui/FullScreenVideo';
 import EditItemModal from '../components/cart/EditItemModal';
 import CheckoutModal from '../components/cart/CheckoutModal';
-import CouponModal from '../components/cart/CouponModal'; // Импорт твоего нового Portal-компонента
+import CouponModal from '../components/cart/CouponModal';
 
 export default function Cart({ user, dbUser, setActiveTab, onRefreshData }) {
   // --- STATE: DATA ---
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
-    
+   
   // --- STATE: ADDRESS & DELIVERY ---
   const [addresses, setAddresses] = useState([]);
   const [deliveryMethod, setDeliveryMethod] = useState('ПВЗ (5Post)');
@@ -19,8 +19,8 @@ export default function Cart({ user, dbUser, setActiveTab, onRefreshData }) {
 
   // --- STATE: DISCOUNTS ---
   const [pointsInput, setPointsInput] = useState('');
-   
-  // Храним объект купона целиком, чтобы знать тип и описание
+  
+  // ВАЖНО: Теперь activeCoupon это объект, а не строка
   const [activeCoupon, setActiveCoupon] = useState(null); 
   const [couponDiscount, setCouponDiscount] = useState(0);
 
@@ -136,7 +136,7 @@ export default function Cart({ user, dbUser, setActiveTab, onRefreshData }) {
       setSavingItem(false);
     }
   };
-    
+   
   const handleDeleteItem = async (e, id) => {
       if(!window.confirm('Удалить товар из корзины?')) return;
       setItems(prev => prev.filter(i => i.id !== id));
@@ -161,8 +161,9 @@ export default function Cart({ user, dbUser, setActiveTab, onRefreshData }) {
       setPointsInput(num > 0 ? num.toString() : '');
   };
 
-  // --- ЛОГИКА ПРИМЕНЕНИЯ КУПОНА ---
-  // Эта функция передается в CouponModal и вызывается, когда юзер кликает на купон
+  // --- ОБНОВЛЕННАЯ ЛОГИКА КУПОНОВ ---
+  
+  // Эта функция вызывается из CouponModal, когда юзер выбрал купон
   const applyCoupon = (coupon) => {
       if (!coupon) {
           setActiveCoupon(null);
@@ -170,38 +171,32 @@ export default function Cart({ user, dbUser, setActiveTab, onRefreshData }) {
           return;
       }
 
-      // 1. Проверка минимальной суммы
-      if (subtotal < (Number(coupon.min_order_amount) || 0)) {
-          window.Telegram?.WebApp?.showAlert(`Мин. сумма заказа: ${coupon.min_order_amount}₽`);
+      // Проверка минимальной суммы
+      if (subtotal < (coupon.min_order_amount || 0)) {
+          window.Telegram?.WebApp?.showAlert(`Мин. сумма заказа для этого купона: ${coupon.min_order_amount}₽`);
           return;
       }
 
-      // 2. Расчет скидки (Процент или Фикс)
+      // Расчет скидки
       let discount = 0;
-      const amount = Number(coupon.discount_amount) || 0;
-
       if (coupon.type === 'percent') {
-          // Если тип 'percent', считаем % от суммы
-          discount = Math.floor(subtotal * (amount / 100));
+          // Например, 10%
+          discount = Math.floor(subtotal * (coupon.discount_amount / 100));
       } else {
-          // Иначе считаем как фиксированную сумму в рублях
-          discount = amount;
+          // Фикс сумма, например 500р
+          discount = Number(coupon.discount_amount);
       }
 
-      // 3. Защита: скидка не может быть больше суммы заказа
+      // Защита от отрицательной суммы
       if (discount > subtotal) discount = subtotal;
 
-      // 4. Сохраняем состояние
       setCouponDiscount(discount);
-      setActiveCoupon(coupon);
-      
-      // 5. Закрываем модалку и вибрируем
+      setActiveCoupon(coupon); // Сохраняем весь объект купона
       setShowCouponModal(false);
       window.Telegram?.WebApp?.HapticFeedback.notificationOccurred('success');
   };
 
   const pointsUsed = parseInt(pointsInput) || 0;
-  // Итоговая сумма не может быть меньше 0
   const finalTotal = Math.max(0, subtotal - couponDiscount - pointsUsed);
 
   const openCheckout = () => {
@@ -231,7 +226,6 @@ export default function Cart({ user, dbUser, setActiveTab, onRefreshData }) {
                   ))}
               </div>
               <div className="h-px bg-white/5 my-4"></div>
-              
               <PaymentBlock 
                   subtotal={subtotal} 
                   total={finalTotal} 
@@ -240,7 +234,7 @@ export default function Cart({ user, dbUser, setActiveTab, onRefreshData }) {
                   setPointsInput={handlePointsChange}
                   userPointsBalance={userPointsBalance} 
                   handleUseMaxPoints={() => handlePointsChange(userPointsBalance)}
-                  // Передаем код активного купона для UI
+                  // Передаем текущий активный код, если есть
                   activeCouponCode={activeCoupon?.code}
                   onOpenCoupons={() => setShowCouponModal(true)}
                   onPay={openCheckout} 
@@ -254,7 +248,7 @@ export default function Cart({ user, dbUser, setActiveTab, onRefreshData }) {
         <EditItemModal item={editingItem} onClose={() => setEditingItem(null)} onSave={saveItemParams} saving={savingItem} />
       )}
 
-      {/* MODAL: COUPONS (Portal) */}
+      {/* Передаем user.id для загрузки списка */}
       {showCouponModal && (
          <CouponModal 
             userId={user?.id}
@@ -265,7 +259,6 @@ export default function Cart({ user, dbUser, setActiveTab, onRefreshData }) {
          />
       )}
 
-      {/* MODAL: CHECKOUT */}
       {showCheckout && (
         <CheckoutModal 
            onClose={(success) => { 
@@ -278,12 +271,8 @@ export default function Cart({ user, dbUser, setActiveTab, onRefreshData }) {
            }}
            user={user} dbUser={dbUser}
            total={finalTotal} items={items} pointsUsed={pointsUsed} 
-           
-           // ВАЖНО: Передаем и сумму скидки, и КОД купона для бэкенда
-           couponDiscount={couponDiscount} 
-           activeCoupon={activeCoupon} // Объект (для UI внутри чекаута, если нужно)
-           couponCode={activeCoupon?.code} // Строка (для отправки в базу через CheckoutModal)
-           
+           // Передаем скидку и объект купона
+           couponDiscount={couponDiscount} activeCoupon={activeCoupon}
            addresses={addresses} deliveryMethod={deliveryMethod} setDeliveryMethod={setDeliveryMethod}
            selectedAddress={selectedAddress} setSelectedAddress={setSelectedAddress}
            selectedPvz={selectedPvz} setSelectedPvz={setSelectedPvz}
