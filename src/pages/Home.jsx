@@ -4,7 +4,7 @@ import ActiveOrders from '../components/home/ActiveOrders';
 import LoyaltyCard from '../components/home/LoyaltyCard';
 import LoyaltyModal from '../components/home/LoyaltyModal';
 import FullScreenVideo from '../components/ui/FullScreenVideo'; 
-import ReviewsBanner from '../components/home/ReviewsBanner'; // <--- Импортируем новый компонент
+import ReviewsBanner from '../components/home/ReviewsBanner'; 
 
 export default function Home({ user, dbUser, setActiveTab }) {
   const [activeOrders, setActiveOrders] = useState([]);
@@ -95,17 +95,14 @@ export default function Home({ user, dbUser, setActiveTab }) {
                 onGoToOrders={() => setActiveTab('profile')} 
             />
 
-            {/* 4. БАННЕР ОТЗЫВОВ (Новое место) */}
-            {/* Вставляем прямо здесь, чтобы разделить заказы и блок помощи */}
-            <div className="-mt-2"> 
-                <ReviewsBanner />
-            </div>
-
-            {/* ГРУППА ПОМОЩИ (ВИДЕО + VPN) */}
+            {/* 4. БЛОК ССЫЛОК (Отзывы, Видео, VPN) */}
             <div className="space-y-3">
-                <h3 className="text-white font-bold text-sm uppercase tracking-wider ml-1 opacity-50">Помощь</h3>
+                {/* Заголовок "Помощь" убрали, теперь это общий список */}
                 
-                {/* 5. ВИДЕО */}
+                {/* Отзывы (Новый дизайн) */}
+                <ReviewsBanner />
+
+                {/* Видео */}
                 <div 
                     onClick={() => setIsTutorialOpen(true)} 
                     className="bg-white/5 border border-white/5 rounded-2xl p-4 flex items-center gap-4 cursor-pointer hover:bg-white/10 transition-colors active:scale-[0.98]"
@@ -121,7 +118,7 @@ export default function Home({ user, dbUser, setActiveTab }) {
                     <span className="material-symbols-outlined text-white/20">chevron_right</span>
                 </div>
 
-                {/* 6. VPN БАННЕР */}
+                {/* VPN */}
                 <div 
                     onClick={openVpn} 
                     className="bg-[#1e2a4a]/40 border border-blue-500/20 rounded-2xl p-4 flex items-center gap-4 cursor-pointer hover:bg-[#1e2a4a]/60 transition-colors active:scale-[0.98]"
