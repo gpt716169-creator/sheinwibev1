@@ -10,7 +10,7 @@ export default function Cart({ user, dbUser, setActiveTab, onRefreshData }) {
   // --- STATE: DATA ---
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
-  
+   
   // --- STATE: ADDRESS & DELIVERY ---
   const [addresses, setAddresses] = useState([]);
   const [deliveryMethod, setDeliveryMethod] = useState('ПВЗ (5Post)');
@@ -36,12 +36,10 @@ export default function Cart({ user, dbUser, setActiveTab, onRefreshData }) {
 
   // --- LOAD DATA ---
   useEffect(() => {
-    // Если юзер есть — грузим данные
     if (user?.id) { 
         loadCart(); 
         loadAddresses(); 
     } else {
-        // Если юзера нет, останавливаем загрузку через секунду (чтобы не висело вечно)
         const t = setTimeout(() => setLoading(false), 2000);
         return () => clearTimeout(t);
     }
@@ -76,20 +74,16 @@ export default function Cart({ user, dbUser, setActiveTab, onRefreshData }) {
       setActiveTab('profile');
   };
 
-  // ОБНОВЛЕННАЯ ФУНКЦИЯ ИЗМЕНЕНИЯ КОЛИЧЕСТВА
   const handleUpdateQuantity = async (id, delta) => {
-      // 1. Ищем товар в текущем списке
       const currentItem = items.find(i => i.id === id);
       if (!currentItem) return;
 
-      // 2. Считаем новое количество (не меньше 1)
       const newQty = Math.max(1, currentItem.quantity + delta);
-      if (newQty === currentItem.quantity) return; // Если не изменилось, выходим
+      if (newQty === currentItem.quantity) return;
 
-      // 3. Мгновенно обновляем экран (чтобы не тупило)
+      // Оптимистичное обновление UI
       setItems(prev => prev.map(i => i.id === id ? { ...i, quantity: newQty } : i));
 
-      // 4. Тихо отправляем данные на сервер
       try {
           await fetch('https://proshein.com/webhook/update-cart-item', {
               method: 'POST',
@@ -97,7 +91,6 @@ export default function Cart({ user, dbUser, setActiveTab, onRefreshData }) {
               body: JSON.stringify({ 
                   id, 
                   quantity: newQty,
-                  // Важно: отправляем текущие размер и цвет, чтобы n8n их не стер
                   size: currentItem.size, 
                   color: currentItem.color,
                   tg_id: user?.id 
@@ -107,17 +100,58 @@ export default function Cart({ user, dbUser, setActiveTab, onRefreshData }) {
           console.error("Ошибка сохранения количества:", e);
       }
   };
-  
+
+  // --- ДОБАВЛЕННАЯ ФУНКЦИЯ SAVE ITEM PARAMS ---
+  const saveItemParams = async (id, newSize, newColor) => {
+    setSavingItem(true);
+    
+    // Находим текущий товар, чтобы сохранить его количество при обновлении
+    const currentItem = items.find(i => i.id === id);
+    const quantity = currentItem ? currentItem.quantity : 1;
+    const colorToSave = newColor || (currentItem ? currentItem.color : '');
+
+    // 1. Оптимистичное обновление UI
+    setItems(prev => prev.map(item => 
+      item.id === id 
+        ? { ...item, size: newSize, color: colorToSave } 
+        : item
+    ));
+
+    try {
+      // 2. Отправка на вебхук (используем тот же, что и для количества)
+      const res = await fetch('https://proshein.com/webhook/update-cart-item', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          id: id,
+          tg_id: user?.id,
+          quantity: quantity, // Передаем текущее кол-во
+          size: newSize,      // Новые параметры
+          color: colorToSave
+        })
+      });
+
+      if (!res.ok) throw new Error('Failed to update');
+
+      window.Telegram?.WebApp?.HapticFeedback.notificationOccurred('success');
+      setEditingItem(null); // Закрываем модалку
+
+    } catch (e) {
+      console.error('Ошибка сохранения параметров:', e);
+      window.Telegram?.WebApp?.showAlert('Не удалось сохранить изменения');
+    } finally {
+      setSavingItem(false);
+    }
+  };
+   
   const handleDeleteItem = async (e, id) => {
       if(!window.confirm('Удалить товар из корзины?')) return;
 
-      // 1. Оптимистичное удаление (сразу убираем с экрана)
       setItems(prev => prev.filter(i => i.id !== id));
 
       try {
           await fetch('https://proshein.com/webhook/delete-item', { 
               method: 'POST', 
-              // !!! ВОТ ЭТОЙ СТРОЧКИ НЕ ХВАТАЛО !!!
               headers: { 'Content-Type': 'application/json' }, 
               body: JSON.stringify({ id, tg_id: user?.id }) 
           });
@@ -143,7 +177,9 @@ export default function Cart({ user, dbUser, setActiveTab, onRefreshData }) {
       if (!code) return;
       
       let discount = 0;
-      if (code === 'WELCOME') discount = 500;
+      // Добавил START500
+      if (code === 'START500') discount = 500;
+      else if (code === 'WELCOME') discount = 500;
       else if (code === 'SALE10') discount = Math.floor(subtotal * 0.1);
       else { 
           window.Telegram?.WebApp?.showAlert('Неверный код или купон истек'); 
@@ -161,6 +197,7 @@ export default function Cart({ user, dbUser, setActiveTab, onRefreshData }) {
   const finalTotal = Math.max(0, subtotal - couponDiscount - pointsUsed);
 
   const openCheckout = () => {
+      // Проверка, что везде выбран размер
       if (items.some(i => i.size === 'NOT_SELECTED' || !i.size)) {
           window.Telegram?.WebApp?.showAlert('Сначала выберите размер для всех товаров!');
           return;
