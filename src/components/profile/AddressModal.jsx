@@ -124,7 +124,12 @@ export default function AddressModal({ isOpen, onClose, editingAddress, user, on
           ...form,
           region: addrDetails.city,
           street: finalStreetString,
-          pickup_point_id: addrDetails.pickup_point_id // Отправляем ID в базу!
+          
+          // === ДОБАВЛЯЕМ ВОТ ЭТО ===
+          postal_code: addrDetails.postal_code || (deliveryMethod === 'ПВЗ (5Post)' ? '000000' : ''),
+          // ========================
+
+          pickup_point_id: addrDetails.pickup_point_id
       });
   };
 
