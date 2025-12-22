@@ -24,7 +24,6 @@ export default function CheckoutModal({
   }, []);
 
   // АВТОЗАПОЛНЕНИЕ (Скрытое)
-  // Когда в AddressBlock выбирают адрес, эта функция обновляет скрытую форму
   const handleAddressSelect = (addr) => {
       if (addr) {
           setForm(prev => ({
@@ -37,7 +36,7 @@ export default function CheckoutModal({
   };
 
   const handlePay = async () => {
-      // Проверяем, выбрал ли юзер адрес (если выбрал - данные контактов там уже есть)
+      // Проверки выбора адреса
       if (deliveryMethod === 'ПВЗ (5Post)' && !selectedPvz) {
           window.Telegram?.WebApp?.showAlert('Выберите магазин 5Post из списка'); return;
       }
@@ -45,7 +44,7 @@ export default function CheckoutModal({
           window.Telegram?.WebApp?.showAlert('Выберите адрес доставки из списка'); return;
       }
 
-      // Валидация контактов (на случай если в сохраненном адресе их почему-то нет)
+      // Валидация контактов
       if (!form.name || form.name.length < 2) { 
           window.Telegram?.WebApp?.showAlert('В выбранном адресе не указано ФИО получателя. Исправьте это в профиле.'); return; 
       }
@@ -59,23 +58,29 @@ export default function CheckoutModal({
 
       let finalAddress = '';
       let pickupInfo = null;
+      let finalPostalCode = '000000'; // Значение по умолчанию
 
       if (deliveryMethod === 'ПВЗ (5Post)') {
           finalAddress = `5Post: ${selectedPvz.city}, ${selectedPvz.address}`;
           
-          // === ИСПРАВЛЕНИЕ ID ПОСТАМАТА ===
-          // 1. Сначала ищем pickup_point_id (это настоящий ID постамата, если адрес был сохранен ранее)
-          // 2. Если его нет, берем id (это если пользователь выбрал точку прямо из поиска и она еще не сохранена как "адрес")
           const realPointId = selectedPvz.pickup_point_id || selectedPvz.id;
-          
-          // 3. На всякий случай чистим от "saved_", если вдруг он туда попал
           const cleanId = realPointId ? String(realPointId).replace('saved_', '') : null;
 
-          pickupInfo = { id: cleanId, postal_code: '000000' };
-          // ================================
+          // === ИЗМЕНЕНИЕ 1: Берем индекс из базы, если он там есть ===
+          finalPostalCode = selectedPvz.postal_code || '000000';
+          // ==========================================================
+
+          pickupInfo = { id: cleanId, postal_code: finalPostalCode };
 
       } else {
+          // Логика для Почты РФ
           finalAddress = [selectedAddress.region, selectedAddress.city, selectedAddress.street, selectedAddress.house, selectedAddress.flat].filter(Boolean).join(', ');
+          
+          // === ИЗМЕНЕНИЕ 2: Берем индекс для Почты РФ из сохраненного адреса ===
+          finalPostalCode = selectedAddress.postal_code || ''; 
+          // Если в базе пусто (старый адрес), можно попытаться выдернуть из строки, 
+          // но сейчас мы рассчитываем, что колонка postal_code заполнена.
+          // ====================================================================
       }
 
       setLoading(true);
@@ -88,8 +93,11 @@ export default function CheckoutModal({
                 email: form.email,
                 address: finalAddress,
                 delivery_method: deliveryMethod,
-                pickup_point_id: pickupInfo?.id, // Теперь тут чистый UUID
-                postal_code: pickupInfo?.postal_code
+                pickup_point_id: pickupInfo?.id,
+                
+                // === ИЗМЕНЕНИЕ 3: Передаем найденный postal_code ===
+                postal_code: finalPostalCode 
+                // ===================================================
             },
             items: items,
             items_total: (total + pointsUsed + couponDiscount), 
@@ -124,11 +132,7 @@ export default function CheckoutModal({
   const openOffer = (e) => {
     e.stopPropagation();
     e.preventDefault();
-    
-    // Для Telegram Mini Apps лучше открывать во внешнем браузере, 
-    // так как встроенный вебвью телеграма иногда глючит с PDF
     if (window.Telegram?.WebApp?.openLink) {
-        // try_instant_view: false заставляет открыть системный браузер
         window.Telegram.WebApp.openLink(OFFER_LINK, { try_instant_view: false });
     } else {
         window.open(OFFER_LINK, '_blank');
@@ -149,7 +153,6 @@ export default function CheckoutModal({
       {/* Контент */}
       <div className="flex-1 overflow-y-auto p-5 pb-32 space-y-6">
          
-         {/* ДОСТАВКА (ЕДИНСТВЕННЫЙ БЛОК ВЫБОРА) */}
          <section className="space-y-3">
              <h3 className="text-[10px] uppercase font-bold text-white/50 tracking-wider">Куда доставить?</h3>
              <AddressBlock 
@@ -158,11 +161,10 @@ export default function CheckoutModal({
                  selectedAddress={selectedAddress} setSelectedAddress={setSelectedAddress}
                  selectedPvz={selectedPvz} setSelectedPvz={setSelectedPvz}
                  onManageAddresses={onManageAddresses}
-                 onFillFromAddress={handleAddressSelect} // <-- Данные улетают в скрытую форму
+                 onFillFromAddress={handleAddressSelect} 
              />
          </section>
 
-         {/* Соглашения */}
          <section className="space-y-3 pt-2">
              <label className="flex gap-3 items-center cursor-pointer group select-none">
                  <input 
