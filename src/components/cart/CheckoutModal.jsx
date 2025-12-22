@@ -60,22 +60,12 @@ export default function CheckoutModal({
       let finalAddress = '';
       let pickupInfo = null;
 
-     if (deliveryMethod === 'ПВЗ (5Post)') {
+      if (deliveryMethod === 'ПВЗ (5Post)') {
           finalAddress = `5Post: ${selectedPvz.city}, ${selectedPvz.address}`;
-          
-          // === ВАЖНОЕ ИСПРАВЛЕНИЕ ===
-          // Мы ищем ID самого постамата.
-          // 1. Если это сохраненный адрес, ID постамата лежит в поле .pickup_point_id
-          // 2. Если это только что найденный через поиск объект, ID постамата лежит в .id
-          const realPointId = selectedPvz.pickup_point_id || selectedPvz.id;
-          
-          // На всякий случай чистим от saved_, если вдруг он там окажется
-          const cleanId = realPointId ? String(realPointId).replace('saved_', '') : null;
-
-          pickupInfo = { id: cleanId, postal_code: '000000' };
-          // ==========================
-          
+          pickupInfo = { id: selectedPvz.id, postal_code: '000000' };
       } else {
+          finalAddress = [selectedAddress.region, selectedAddress.city, selectedAddress.street, selectedAddress.house, selectedAddress.flat].filter(Boolean).join(', ');
+      }
 
       setLoading(true);
       try {
