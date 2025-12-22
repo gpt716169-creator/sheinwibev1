@@ -13,19 +13,21 @@ export default function AddressBlock({
   const saved5PostAddresses = addresses.filter(addr => (addr.street+addr.city+(addr.region||'')).toLowerCase().includes('5post'));
 
   const handleSelectSavedPvz = (addr) => {
-      setSelectedPvz({
-          id: 'saved_' + addr.id,
-          city: addr.city || '',
-          address: addr.street || addr.address,
-          name: 'Сохраненный пункт',
-          postal_code: '000000',
-          // === ДОБАВЛЯЕМ ЭТУ СТРОКУ ===
-          pickup_point_id: addr.pickup_point_id 
-          // ============================
-      });
-      if (onFillFromAddress) onFillFromAddress(addr);
-  };
+      // 1. Смотрим в консоль, что реально пришло (для проверки)
+      console.log("Выбрали адрес (raw):", addr);
+      console.log("Есть ли тут pickup_point_id?", addr.pickup_point_id);
 
+      setSelectedPvz({
+          ...addr, // <--- МАГИЯ ЗДЕСЬ: Копируем ВСЕ поля из базы автоматически (включая pickup_point_id)
+          
+          // А теперь перезаписываем только то, что нужно для интерфейса
+          id: 'saved_' + addr.id, 
+          name: 'Сохраненный пункт',
+          postal_code: '000000' 
+      });
+
+      if (onFillFromAddress) onFillFromAddress(addr);
+  };
   const handleSelectCourier = (addr) => {
       setSelectedAddress(addr);
       if (onFillFromAddress) onFillFromAddress(addr);
