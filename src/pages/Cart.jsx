@@ -34,6 +34,7 @@ export default function Cart({ user, dbUser, setActiveTab, onRefreshData }) {
   // CONSTANTS
   const VIDEO_URL = "https://storage.yandexcloud.net/videosheinwibe/vkclips_20251219083418.mp4"; 
   const MAX_POINTS_PERCENT = 0.35;
+  const MIN_ORDER_AMOUNT = 3000; // --- НОВАЯ КОНСТАНТА: Мин. заказ ---
   const userPointsBalance = dbUser?.points || 0;
 
   // --- LOAD DATA ---
@@ -161,9 +162,7 @@ export default function Cart({ user, dbUser, setActiveTab, onRefreshData }) {
       setPointsInput(num > 0 ? num.toString() : '');
   };
 
-  // --- ОБНОВЛЕННАЯ ЛОГИКА КУПОНОВ ---
-  
-  // Эта функция вызывается из CouponModal, когда юзер выбрал купон
+  // --- ЛОГИКА КУПОНОВ ---
   const applyCoupon = (coupon) => {
       if (!coupon) {
           setActiveCoupon(null);
@@ -171,27 +170,22 @@ export default function Cart({ user, dbUser, setActiveTab, onRefreshData }) {
           return;
       }
 
-      // Проверка минимальной суммы
       if (subtotal < (coupon.min_order_amount || 0)) {
           window.Telegram?.WebApp?.showAlert(`Мин. сумма заказа для этого купона: ${coupon.min_order_amount}₽`);
           return;
       }
 
-      // Расчет скидки
       let discount = 0;
       if (coupon.type === 'percent') {
-          // Например, 10%
           discount = Math.floor(subtotal * (coupon.discount_amount / 100));
       } else {
-          // Фикс сумма, например 500р
           discount = Number(coupon.discount_amount);
       }
 
-      // Защита от отрицательной суммы
       if (discount > subtotal) discount = subtotal;
 
       setCouponDiscount(discount);
-      setActiveCoupon(coupon); // Сохраняем весь объект купона
+      setActiveCoupon(coupon); 
       setShowCouponModal(false);
       window.Telegram?.WebApp?.HapticFeedback.notificationOccurred('success');
   };
@@ -199,11 +193,64 @@ export default function Cart({ user, dbUser, setActiveTab, onRefreshData }) {
   const pointsUsed = parseInt(pointsInput) || 0;
   const finalTotal = Math.max(0, subtotal - couponDiscount - pointsUsed);
 
+  // --- НОВАЯ ЛОГИКА: РАСЧЕТ ЦЕН ДЛЯ ВЫКУПА (ДЛЯ ЧЕКА) ---
+  // Мы создаем отдельный список товаров, где рассчитываем цену с учетом скидок
+  const itemsForCheckout = useMemo(() => {
+      const totalDiscountValue = couponDiscount + pointsUsed;
+      
+      // Если скидок нет, просто добавляем поле price_at_purchase равное текущей цене
+      if (totalDiscountValue <= 0) {
+          return items.map(item => ({
+              ...item,
+              price_at_purchase: item.final_price_rub
+          }));
+      }
+
+      // Если скидка есть, распределяем её пропорционально
+      let distributedDiscount = 0;
+      
+      return items.map((item, index) => {
+          // Стоимость позиции (цена * кол-во)
+          const itemTotalOriginal = item.final_price_rub * item.quantity;
+          
+          // Доля товара в общей сумме
+          // Формула: (ЦенаПозиции / ОбщуюСумму) * ОбщаяСкидка
+          let itemDiscount = Math.floor((itemTotalOriginal / subtotal) * totalDiscountValue);
+          
+          // Корректировка копеек на последнем товаре, чтобы сумма сходилась
+          if (index === items.length - 1) {
+              itemDiscount = totalDiscountValue - distributedDiscount;
+          } else {
+              distributedDiscount += itemDiscount;
+          }
+
+          // Итоговая стоимость позиции со скидкой
+          const totalDiscountedPrice = itemTotalOriginal - itemDiscount;
+          
+          // Цена за 1 штуку (для базы данных)
+          const unitPrice = Math.floor(totalDiscountedPrice / item.quantity);
+
+          return {
+              ...item,
+              price_at_purchase: unitPrice // <--- Эту цену мы будем сохранять в базу
+          };
+      });
+  }, [items, subtotal, couponDiscount, pointsUsed]);
+
+
   const openCheckout = () => {
+      // 1. Проверка размеров
       if (items.some(i => i.size === 'NOT_SELECTED' || !i.size)) {
           window.Telegram?.WebApp?.showAlert('Сначала выберите размер для всех товаров!');
           return;
       }
+
+      // 2. Проверка минимальной суммы (НОВОЕ)
+      if (subtotal < MIN_ORDER_AMOUNT) {
+          window.Telegram?.WebApp?.showAlert(`Минимальная сумма заказа: ${MIN_ORDER_AMOUNT.toLocaleString()} ₽`);
+          return;
+      }
+
       setShowCheckout(true);
   };
 
@@ -234,7 +281,6 @@ export default function Cart({ user, dbUser, setActiveTab, onRefreshData }) {
                   setPointsInput={handlePointsChange}
                   userPointsBalance={userPointsBalance} 
                   handleUseMaxPoints={() => handlePointsChange(userPointsBalance)}
-                  // Передаем текущий активный код, если есть
                   activeCouponCode={activeCoupon?.code}
                   onOpenCoupons={() => setShowCouponModal(true)}
                   onPay={openCheckout} 
@@ -248,7 +294,6 @@ export default function Cart({ user, dbUser, setActiveTab, onRefreshData }) {
         <EditItemModal item={editingItem} onClose={() => setEditingItem(null)} onSave={saveItemParams} saving={savingItem} />
       )}
 
-      {/* Передаем user.id для загрузки списка */}
       {showCouponModal && (
          <CouponModal 
             userId={user?.id}
@@ -270,8 +315,9 @@ export default function Cart({ user, dbUser, setActiveTab, onRefreshData }) {
                } 
            }}
            user={user} dbUser={dbUser}
-           total={finalTotal} items={items} pointsUsed={pointsUsed} 
-           // Передаем скидку и объект купона
+           total={finalTotal} 
+           items={itemsForCheckout} // <--- ПЕРЕДАЕМ ТОВАРЫ С РАССЧИТАННЫМИ ЦЕНАМИ ВЫКУПА
+           pointsUsed={pointsUsed} 
            couponDiscount={couponDiscount} activeCoupon={activeCoupon}
            addresses={addresses} deliveryMethod={deliveryMethod} setDeliveryMethod={setDeliveryMethod}
            selectedAddress={selectedAddress} setSelectedAddress={setSelectedAddress}
