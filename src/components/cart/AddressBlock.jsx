@@ -25,7 +25,8 @@ export default function AddressBlock({
           
           // === ИСПРАВЛЕНИЕ ===
           // Если в базе есть индекс - берем его. Если нет - ставим нули.
-          postal_code: addr.postal_code || '000000' 
+          postal_code: addr.postal_code || '000000',
+          address: addr.street
           // ===================
       });
 
