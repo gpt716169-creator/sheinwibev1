@@ -20,9 +20,7 @@ export default function OrderDetailsModal({ order, onClose }) {
   useEffect(() => {
     // БЛОКИРУЕМ при открытии
     document.body.style.overflow = 'hidden';
-    // На мобилках иногда нужно фиксировать body, чтобы не дергался фон
-    // document.body.classList.add('overflow-hidden'); // Можно раскомментировать, если нужно
-
+    
     // РАЗБЛОКИРУЕМ при полном удалении компонента (unmount)
     return () => {
       unlockScroll();
@@ -30,14 +28,13 @@ export default function OrderDetailsModal({ order, onClose }) {
   }, []);
 
   // --- ОБЕРТКА ДЛЯ ЗАКРЫТИЯ ---
-  // Мы вызываем это вручную перед onClose, чтобы гарантировать сброс стилей
   const handleClose = (e) => {
       if (e) e.stopPropagation(); // Чтобы клик не прошел сквозь
       unlockScroll(); // Сначала разблокируем
       onClose(); // Потом закрываем в React
   };
 
-  // --- ЛОГИКА ТРЕКИНГА (Та же самая) ---
+  // --- ЛОГИКА ТРЕКИНГА ---
   const fullHistory = useMemo(() => {
     if (!order.created_at) return [];
 
@@ -82,13 +79,13 @@ export default function OrderDetailsModal({ order, onClose }) {
   return createPortal(
     <div className="fixed inset-0 z-[99999] flex items-center justify-center p-4" style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0 }}>
         
-        {/* Задний фон - используем handleClose */}
+        {/* Задний фон */}
         <div className="absolute inset-0 bg-black/80 backdrop-blur-sm animate-fade-in" onClick={handleClose}></div>
         
         {/* Карточка */}
         <div className="relative z-10 bg-[#151c28] w-full max-w-sm rounded-2xl border border-white/10 shadow-2xl flex flex-col max-h-[85vh] overflow-hidden animate-scale-in" onClick={e => e.stopPropagation()}>
             
-            {/* HEADER - используем handleClose */}
+            {/* HEADER */}
             <div className="p-4 border-b border-white/5 flex justify-between items-center bg-[#1a2333]">
                 <div>
                     <h2 className="font-bold text-white text-sm">Заказ #{order.id.slice(0,8).toUpperCase()}</h2>
@@ -148,12 +145,11 @@ export default function OrderDetailsModal({ order, onClose }) {
                                     </div>
                                 </div>
                                 <div className="flex flex-col justify-center text-right">
-    {/* ИСПРАВЛЕНО: Добавили price_at_purchase первым приоритетом */}
-    <span className="text-xs text-white font-bold">
-        {Math.floor(item.price_at_purchase || item.final_price_rub || 0)} ₽
-    </span>
-    <span className="text-[10px] text-white/40">x{item.quantity}</span>
-</div>
+                                    <span className="text-xs text-white font-bold">
+                                        {Math.floor(item.price_at_purchase || item.final_price_rub || 0)} ₽
+                                    </span>
+                                    <span className="text-[10px] text-white/40">x{item.quantity}</span>
+                                </div>
                             </div>
                         ))}
                     </div>
@@ -163,7 +159,10 @@ export default function OrderDetailsModal({ order, onClose }) {
                 <div className="pt-3 border-t border-white/5 text-xs space-y-2">
                      <div className="flex justify-between">
                          <span className="text-white/50">Получатель</span>
-                         <span className="text-white text-right max-w-[60%] truncate">{order.recipient_name || order.user_info?.name || 'Не указано'}</span>
+                         {/* --- ИСПРАВЛЕНИЕ ЗДЕСЬ: добавили contact_name --- */}
+                         <span className="text-white text-right max-w-[60%] truncate">
+                            {order.contact_name || order.user_info?.name || 'Не указано'}
+                         </span>
                      </div>
                      <div className="flex justify-between">
                          <span className="text-white/50">Доставка</span>
