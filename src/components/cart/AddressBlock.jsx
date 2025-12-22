@@ -1,11 +1,11 @@
 import React from 'react';
 
 export default function AddressBlock({ 
-    deliveryMethod, setDeliveryMethod, addresses, 
-    selectedAddress, setSelectedAddress, 
-    selectedPvz, setSelectedPvz,
-    onManageAddresses, // <-- Кнопка теперь ведет в Адреса
-    onFillFromAddress
+  deliveryMethod, setDeliveryMethod, addresses, 
+  selectedAddress, setSelectedAddress, 
+  selectedPvz, setSelectedPvz,
+  onManageAddresses, 
+  onFillFromAddress
 }) {
 
   // Фильтры
@@ -13,23 +13,27 @@ export default function AddressBlock({
   const saved5PostAddresses = addresses.filter(addr => (addr.street+addr.city+(addr.region||'')).toLowerCase().includes('5post'));
 
   const handleSelectSavedPvz = (addr) => {
-      // 1. Смотрим в консоль, что реально пришло (для проверки)
-      console.log("Выбрали адрес (raw):", addr);
-      console.log("Есть ли тут pickup_point_id?", addr.pickup_point_id);
+      // Отладка
+      console.log("Выбрали адрес:", addr);
 
       setSelectedPvz({
-          ...addr, // <--- МАГИЯ ЗДЕСЬ: Копируем ВСЕ поля из базы автоматически (включая pickup_point_id)
+          ...addr, // Копируем всё из базы (id, pickup_point_id, POSTAL_CODE)
           
-          // А теперь перезаписываем только то, что нужно для интерфейса
+          // Перезаписываем только технические поля для UI
           id: 'saved_' + addr.id, 
           name: 'Сохраненный пункт',
-          postal_code: '000000' 
+          
+          // === ИСПРАВЛЕНИЕ ===
+          // Если в базе есть индекс - берем его. Если нет - ставим нули.
+          postal_code: addr.postal_code || '000000' 
+          // ===================
       });
 
       if (onFillFromAddress) onFillFromAddress(addr);
   };
+
   const handleSelectCourier = (addr) => {
-      setSelectedAddress(addr);
+      setSelectedAddress(addr); // Тут всё ок, addr копируется целиком
       if (onFillFromAddress) onFillFromAddress(addr);
   };
 
