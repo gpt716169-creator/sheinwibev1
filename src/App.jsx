@@ -10,11 +10,32 @@ function App() {
   const [dbUser, setDbUser] = useState(null);
 
   // --- ЛОГИКА ПРОКРУТКИ НАВЕРХ ---
-  // Каждый раз, когда меняется вкладка (activeTab), мы кидаем юзера вверх
   useEffect(() => {
     window.scrollTo(0, 0);
   }, [activeTab]);
-  // -------------------------------
+
+  // --- НОВОЕ: ПРОВЕРКА ВОЗВРАТА С ОПЛАТЫ ---
+  useEffect(() => {
+      // Читаем параметры из адресной строки (куда нас вернула Робокасса)
+      const params = new URLSearchParams(window.location.search);
+      const status = params.get('payment');
+
+      if (status === 'success') {
+          // 1. Показываем сообщение
+          window.Telegram?.WebApp?.showAlert("Оплата прошла успешно! Ваш заказ принят в работу.");
+          // 2. Перекидываем в профиль (чтобы юзер увидел свой новый заказ в списке)
+          setActiveTab('profile');
+          // 3. Чистим URL, чтобы убрать "?payment=success" (красота)
+          window.history.replaceState(null, '', window.location.pathname);
+      } 
+      else if (status === 'fail') {
+          window.Telegram?.WebApp?.showAlert("Оплата не прошла или была отменена.");
+          // Можно оставить на главной или отправить в корзину
+          setActiveTab('cart'); 
+          window.history.replaceState(null, '', window.location.pathname);
+      }
+  }, []);
+  // ------------------------------------------
 
   useEffect(() => {
     // Безопасная проверка наличия Telegram WebApp
