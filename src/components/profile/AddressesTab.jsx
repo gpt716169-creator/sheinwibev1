@@ -23,7 +23,7 @@ export default function AddressesTab({ addresses, loading, onAdd, onEdit, onDele
                         <div className="pr-8">
                             <div className="flex items-center gap-2 mb-1">
                                 <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold uppercase ${isPvz ? 'bg-red-500/20 text-red-400' : 'bg-blue-500/20 text-blue-400'}`}>
-                                    {isPvz ? '5Post' : 'Курьер'}
+                                    {isPvz ? '5Post' : 'Почта РФ'}
                                 </span>
                                 <h4 className="text-white font-bold text-sm">{addr.full_name}</h4>
                             </div>
