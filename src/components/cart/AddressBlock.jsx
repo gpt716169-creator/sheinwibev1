@@ -13,15 +13,18 @@ export default function AddressBlock({
   const saved5PostAddresses = addresses.filter(addr => (addr.street+addr.city+(addr.region||'')).toLowerCase().includes('5post'));
 
   const handleSelectSavedPvz = (addr) => {
-      setSelectedPvz({
-          id: 'saved_' + addr.id,
-          city: addr.city || '',
-          address: addr.street || addr.address,
-          name: 'Сохраненный пункт',
-          postal_code: '000000'
-      });
-      if (onFillFromAddress) onFillFromAddress(addr);
-  };
+      setSelectedPvz({
+          id: 'saved_' + addr.id,
+          city: addr.city || '',
+          address: addr.street || addr.address,
+          name: 'Сохраненный пункт',
+          postal_code: '000000',
+          // === ДОБАВЛЯЕМ ЭТУ СТРОКУ ===
+          pickup_point_id: addr.pickup_point_id 
+          // ============================
+      });
+      if (onFillFromAddress) onFillFromAddress(addr);
+  };
 
   const handleSelectCourier = (addr) => {
       setSelectedAddress(addr);
