@@ -1,8 +1,10 @@
-import React, { useMemo, useEffect } from 'react';
+import React, { useMemo, useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 
 export default function OrderDetailsModal({ order, onClose }) {
   if (!order) return null;
+
+  const [paying, setPaying] = useState(false);
 
   // --- ФУНКЦИЯ ПРИНУДИТЕЛЬНОЙ РАЗБЛОКИРОВКИ ---
   const unlockScroll = () => {
@@ -13,36 +15,54 @@ export default function OrderDetailsModal({ order, onClose }) {
       document.body.classList.remove('overflow-hidden');
   };
 
-  // --- УПРАВЛЕНИЕ СКРОЛЛОМ ---
   useEffect(() => {
     document.body.style.overflow = 'hidden';
-    return () => {
-      unlockScroll();
-    };
+    return () => { unlockScroll(); };
   }, []);
 
-  // --- ОБЕРТКА ДЛЯ ЗАКРЫТИЯ ---
   const handleClose = (e) => {
       if (e) e.stopPropagation(); 
       unlockScroll(); 
       onClose(); 
   };
 
+  // --- ЛОГИКА ПОВТОРНОЙ ОПЛАТЫ ---
+  const handleRepay = async () => {
+      setPaying(true);
+      try {
+          // Стучимся на новый вебхук для генерации ссылки
+          const res = await fetch('https://proshein.com/webhook/get-payment-link', {
+              method: 'POST',
+              headers: {'Content-Type': 'application/json'},
+              body: JSON.stringify({ order_id: order.id })
+          });
+
+          const json = await res.json();
+
+          if (json.status === 'success' && json.payment_url) {
+              window.location.href = json.payment_url;
+          } else {
+              window.Telegram?.WebApp?.showAlert("Ошибка получения ссылки: " + json.message);
+              setPaying(false);
+          }
+      } catch (e) {
+          window.Telegram?.WebApp?.showAlert("Ошибка сети");
+          setPaying(false);
+      }
+  };
+
   // --- ЛОГИКА ТРЕКИНГА ---
   const fullHistory = useMemo(() => {
     if (!order.created_at) return [];
 
-    // === НОВОЕ: Если ждет оплаты, показываем только это ===
     if (order.status === 'waiting_for_pay') {
         return [{
             status: 'Ожидает оплаты',
             location: 'Приложение',
             date: order.created_at,
-            isWarning: true // Флаг для цвета
+            isWarning: true
         }];
     }
-
-    // Если отменен
     if (order.status === 'cancelled') {
         return [{
             status: 'Заказ отменен',
@@ -89,14 +109,9 @@ export default function OrderDetailsModal({ order, onClose }) {
       return new Date(dateString).toLocaleDateString('ru-RU', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
   };
 
-  // --- РЕНДЕР ---
   return createPortal(
     <div className="fixed inset-0 z-[99999] flex items-center justify-center p-4" style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0 }}>
-        
-        {/* Задний фон */}
         <div className="absolute inset-0 bg-black/80 backdrop-blur-sm animate-fade-in" onClick={handleClose}></div>
-        
-        {/* Карточка */}
         <div className="relative z-10 bg-[#151c28] w-full max-w-sm rounded-2xl border border-white/10 shadow-2xl flex flex-col max-h-[85vh] overflow-hidden animate-scale-in" onClick={e => e.stopPropagation()}>
             
             {/* HEADER */}
@@ -113,37 +128,29 @@ export default function OrderDetailsModal({ order, onClose }) {
             {/* SCROLLABLE BODY */}
             <div className="overflow-y-auto p-4 space-y-5 hide-scrollbar">
                 
-                {/* ИСТОРИЯ СТАТУСОВ */}
+                {/* ИСТОРИЯ */}
                 <div>
                     <h3 className="text-white/40 text-[10px] uppercase font-bold mb-3 tracking-wider">История статусов</h3>
                     <div className="relative pl-2 space-y-0">
                         <div className="absolute top-2 bottom-2 left-[11px] w-0.5 bg-white/10"></div>
-                        
                         {fullHistory.length === 0 ? (
                             <p className="text-white/30 text-xs pl-6">Ожидание статуса...</p>
                         ) : (
                             fullHistory.map((item, index) => {
                                 const isLatest = index === 0;
-                                
-                                // Определяем цвет кружка
                                 let dotColor = 'bg-[#151c28] border-white/30';
                                 if (isLatest) {
                                     if (item.isWarning) dotColor = 'bg-orange-500 border-orange-500 shadow-[0_0_8px_rgba(249,115,22,0.6)]';
                                     else if (item.isError) dotColor = 'bg-red-500 border-red-500 shadow-[0_0_8px_rgba(239,68,68,0.6)]';
                                     else dotColor = 'bg-primary border-primary shadow-[0_0_8px_rgba(19,236,91,0.6)]';
                                 }
-
                                 return (
                                     <div key={index} className="relative flex gap-3 pb-5 last:pb-0">
                                         <div className={`relative z-10 w-2.5 h-2.5 rounded-full border shrink-0 mt-1.5 ${dotColor}`}></div>
                                         <div>
-                                            <p className={`text-xs font-medium leading-tight ${isLatest ? 'text-white' : 'text-white/50'}`}>
-                                                {item.status}
-                                            </p>
+                                            <p className={`text-xs font-medium leading-tight ${isLatest ? 'text-white' : 'text-white/50'}`}>{item.status}</p>
                                             <div className="flex gap-2 text-[10px] text-white/30 mt-0.5">
-                                                <span>{formatDate(item.date)}</span>
-                                                <span>•</span>
-                                                <span>{item.location}</span>
+                                                <span>{formatDate(item.date)}</span><span>•</span><span>{item.location}</span>
                                             </div>
                                         </div>
                                     </div>
@@ -168,9 +175,7 @@ export default function OrderDetailsModal({ order, onClose }) {
                                     </div>
                                 </div>
                                 <div className="flex flex-col justify-center text-right">
-                                    <span className="text-xs text-white font-bold">
-                                        {Math.floor(item.price_at_purchase || item.final_price_rub || 0)} ₽
-                                    </span>
+                                    <span className="text-xs text-white font-bold">{Math.floor(item.price_at_purchase || item.final_price_rub || 0)} ₽</span>
                                     <span className="text-[10px] text-white/40">x{item.quantity}</span>
                                 </div>
                             </div>
@@ -182,9 +187,7 @@ export default function OrderDetailsModal({ order, onClose }) {
                 <div className="pt-3 border-t border-white/5 text-xs space-y-2">
                       <div className="flex justify-between">
                           <span className="text-white/50">Получатель</span>
-                          <span className="text-white text-right max-w-[60%] truncate">
-                             {order.contact_name || order.user_info?.name || 'Не указано'}
-                          </span>
+                          <span className="text-white text-right max-w-[60%] truncate">{order.contact_name || order.user_info?.name || 'Не указано'}</span>
                       </div>
                       <div className="flex justify-between">
                           <span className="text-white/50">Доставка</span>
@@ -197,13 +200,24 @@ export default function OrderDetailsModal({ order, onClose }) {
                          </div>
                       )}
                 </div>
-
             </div>
 
-            {/* FOOTER */}
-            <div className="p-4 bg-[#1a2333] border-t border-white/5 shrink-0 flex justify-between items-center">
-                <span className="text-sm text-white/60">Итого:</span>
-                <span className="text-lg font-bold text-primary">{Number(order.total_amount).toLocaleString()} ₽</span>
+            {/* FOOTER - КНОПКА ОПЛАТЫ */}
+            <div className="p-4 bg-[#1a2333] border-t border-white/5 shrink-0">
+                {order.status === 'waiting_for_pay' ? (
+                     <button 
+                        onClick={handleRepay} 
+                        disabled={paying}
+                        className="w-full h-12 bg-primary text-[#102216] font-black rounded-xl text-base uppercase shadow-[0_0_15px_rgba(19,236,91,0.3)] active:scale-95 transition-transform flex items-center justify-center gap-2"
+                     >
+                        {paying ? <span className="material-symbols-outlined animate-spin">progress_activity</span> : `Оплатить ${Math.floor(order.total_amount).toLocaleString()} ₽`}
+                     </button>
+                ) : (
+                    <div className="flex justify-between items-center">
+                        <span className="text-sm text-white/60">Итого:</span>
+                        <span className="text-lg font-bold text-primary">{Number(order.total_amount).toLocaleString()} ₽</span>
+                    </div>
+                )}
             </div>
 
         </div>
