@@ -6,10 +6,14 @@ import EditItemModal from '../components/cart/EditItemModal';
 import CheckoutModal from '../components/cart/CheckoutModal';
 import CouponModal from '../components/cart/CouponModal';
 import { supabase } from '../supabaseClient';
+
 export default function Cart({ user, dbUser, setActiveTab, onRefreshData }) {
   // --- STATE: DATA ---
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
+  
+  // === НОВОЕ: ID выбранных товаров ===
+  const [selectedIds, setSelectedIds] = useState([]); 
    
   // --- STATE: ADDRESS & DELIVERY ---
   const [addresses, setAddresses] = useState([]);
@@ -33,7 +37,7 @@ export default function Cart({ user, dbUser, setActiveTab, onRefreshData }) {
   const VIDEO_URL = "https://storage.yandexcloud.net/videosheinwibe/vkclips_20251219083418.mp4"; 
   
   // НАСТРОЙКИ ОГРАНИЧЕНИЙ
-  const MIN_ORDER_AMOUNT = 3000;      // Минимальная сумма заказа
+  const MIN_ORDER_AMOUNT = 3000;       // Минимальная сумма заказа
   const MAX_TOTAL_DISCOUNT_PERCENT = 0.50; // Максимальная общая скидка (Купон + Баллы) = 50%
   
   const userPointsBalance = dbUser?.points || 0;
@@ -49,13 +53,33 @@ export default function Cart({ user, dbUser, setActiveTab, onRefreshData }) {
     }
   }, [user]);
 
+  // === НОВОЕ: Авто-выбор товаров при загрузке ===
+  // Если список товаров изменился (загрузился), выбираем доступные, если список выбранных пуст
+  useEffect(() => {
+      if (items.length > 0) {
+          setSelectedIds(prev => {
+              // Находим все доступные ID (есть в наличии)
+              const availableIds = items
+                  .filter(i => i.is_in_stock !== false)
+                  .map(i => i.id);
+
+              // Если раньше ничего не было выбрано (первая загрузка), выбираем все доступные
+              if (prev.length === 0) return availableIds;
+
+              // Если уже были выбраны, оставляем только те, что всё еще доступны и есть в списке items
+              // (чтобы убрать удаленные или те, что пропали из наличия)
+              return prev.filter(id => availableIds.includes(id));
+          });
+      }
+  }, [items]);
+
   const loadCart = async () => {
     setLoading(true);
     try {
       const res = await fetch(`https://proshein.com/webhook/get-cart?tg_id=${user?.id}`);
       if (!res.ok) throw new Error('Ошибка сети');
       const json = await res.json();
-      // ВАЖНО: Принудительно превращаем цены и количество в числа, чтобы избежать ошибок с текстом
+      // ВАЖНО: Принудительно превращаем цены и количество в числа
       setItems((json.items || []).map(i => ({ 
           ...i, 
           quantity: Number(i.quantity) || 1,
@@ -70,13 +94,11 @@ export default function Cart({ user, dbUser, setActiveTab, onRefreshData }) {
 
   const loadAddresses = async () => {
       try {
-          // МЫ ЗАМЕНИЛИ ВЕБХУК НА ПРЯМОЙ ЗАПРОС К БАЗЕ
-          // И явно запрашиваем pickup_point_id
           const { data, error } = await supabase
               .from('user_addresses')
               .select('*, pickup_point_id') 
               .eq('user_id', user?.id)
-              .order('is_default', { ascending: false }); // Сортируем: дефолтный первый
+              .order('is_default', { ascending: false });
 
           if (error) throw error;
           setAddresses(data || []);
@@ -86,6 +108,17 @@ export default function Cart({ user, dbUser, setActiveTab, onRefreshData }) {
   };
 
   // --- ACTIONS ---
+
+  // === НОВОЕ: Переключение выбора товара ===
+  const handleToggleSelect = (id) => {
+      setSelectedIds(prev => {
+          if (prev.includes(id)) {
+              return prev.filter(i => i !== id); // Убираем
+          } else {
+              return [...prev, id]; // Добавляем
+          }
+      });
+  };
 
   const handleManageAddresses = () => {
       sessionStorage.setItem('open_profile_tab', 'addresses');
@@ -155,7 +188,12 @@ export default function Cart({ user, dbUser, setActiveTab, onRefreshData }) {
    
   const handleDeleteItem = async (e, id) => {
       if(!window.confirm('Удалить товар из корзины?')) return;
+      
+      // Удаляем из списка товаров
       setItems(prev => prev.filter(i => i.id !== id));
+      // Удаляем из списка выбранных, если он там был
+      setSelectedIds(prev => prev.filter(selId => selId !== id));
+
       try {
           await fetch('https://proshein.com/webhook/delete-item', { 
               method: 'POST', 
@@ -167,27 +205,27 @@ export default function Cart({ user, dbUser, setActiveTab, onRefreshData }) {
 
   // --- CALCULATIONS ---
   
-  // 1. Считаем Subtotal
-  const subtotal = useMemo(() => items.reduce((sum, i) => sum + (i.final_price_rub * i.quantity), 0), [items]);
+  // === ВАЖНОЕ ИЗМЕНЕНИЕ: Считаем Subtotal ТОЛЬКО ДЛЯ ВЫБРАННЫХ ===
+  const subtotal = useMemo(() => {
+      return items
+          .filter(i => selectedIds.includes(i.id)) // Фильтр
+          .reduce((sum, i) => sum + (i.final_price_rub * i.quantity), 0);
+  }, [items, selectedIds]);
 
-  // 2. Расчет лимитов для баллов (С учетом 50% ограничения)
-  const maxTotalDiscount = Math.floor(subtotal * MAX_TOTAL_DISCOUNT_PERCENT); // Макс скидка вообще (50%)
+  // Расчет лимитов для баллов
+  const maxTotalDiscount = Math.floor(subtotal * MAX_TOTAL_DISCOUNT_PERCENT); 
   
-  // Сколько баллов можно списать? (Лимит 50% минус уже примененный купон)
   const availablePointsLimit = Math.max(0, Math.min(
-      userPointsBalance,           // Не больше чем есть у юзера
-      maxTotalDiscount - couponDiscount // Не больше остатка до 50%
+      userPointsBalance,            
+      maxTotalDiscount - couponDiscount 
   ));
 
   const handlePointsChange = (val) => {
       let num = parseInt(val) || 0;
       if (num < 0) num = 0;
       
-      // Проверка на лимит
       if (num > availablePointsLimit) {
           num = availablePointsLimit;
-          // Можно показать уведомление, если юзер пытается ввести больше
-          // window.Telegram?.WebApp?.showAlert(`Максимум можно списать: ${availablePointsLimit}`);
       }
       setPointsInput(num > 0 ? num.toString() : '');
   };
@@ -212,14 +250,11 @@ export default function Cart({ user, dbUser, setActiveTab, onRefreshData }) {
           discount = Number(coupon.discount_amount);
       }
 
-      // Ограничиваем сам купон тоже, если он вдруг больше 50% (редко, но бывает)
-      // Если ты хочешь разрешить купоны >50%, убери эту строку, но тогда баллы станут 0
       if (discount > maxTotalDiscount) discount = maxTotalDiscount;
 
       setCouponDiscount(discount);
       setActiveCoupon(coupon); 
       
-      // Сбрасываем введенные баллы, если после применения купона они превышают новый лимит
       if ((parseInt(pointsInput) || 0) > (maxTotalDiscount - discount)) {
           setPointsInput('');
       }
@@ -228,16 +263,18 @@ export default function Cart({ user, dbUser, setActiveTab, onRefreshData }) {
       window.Telegram?.WebApp?.HapticFeedback.notificationOccurred('success');
   };
 
-  const pointsUsed = Math.min(parseInt(pointsInput) || 0, availablePointsLimit); // Доп. защита
+  const pointsUsed = Math.min(parseInt(pointsInput) || 0, availablePointsLimit); 
   const finalTotal = Math.max(0, subtotal - couponDiscount - pointsUsed);
 
-  // --- НОВАЯ ЛОГИКА: РАСПРЕДЕЛЕНИЕ СКИДКИ ---
+  // --- РАСПРЕДЕЛЕНИЕ СКИДКИ (ТОЛЬКО НА ВЫБРАННЫЕ) ---
   const itemsForCheckout = useMemo(() => {
+      // 1. Берем только выбранные товары
+      const selectedItems = items.filter(item => selectedIds.includes(item.id));
+      
       const totalDiscountValue = couponDiscount + pointsUsed;
       
       if (totalDiscountValue <= 0) {
-          // Если скидок нет, дублируем текущую цену в price_at_purchase
-          return items.map(item => ({
+          return selectedItems.map(item => ({
               ...item,
               price_at_purchase: item.final_price_rub
           }));
@@ -245,14 +282,14 @@ export default function Cart({ user, dbUser, setActiveTab, onRefreshData }) {
 
       let distributedDiscount = 0;
       
-      return items.map((item, index) => {
+      return selectedItems.map((item, index) => {
           const itemTotalOriginal = item.final_price_rub * item.quantity;
           
-          // Пропорциональная скидка
+          // Пропорциональная скидка по отношению к Subtotal (который тоже только от выбранных)
           let itemDiscount = Math.floor((itemTotalOriginal / subtotal) * totalDiscountValue);
           
-          // Корректировка копеек
-          if (index === items.length - 1) {
+          // Корректировка копеек на последнем товаре
+          if (index === selectedItems.length - 1) {
               itemDiscount = totalDiscountValue - distributedDiscount;
           } else {
               distributedDiscount += itemDiscount;
@@ -263,23 +300,28 @@ export default function Cart({ user, dbUser, setActiveTab, onRefreshData }) {
 
           return {
               ...item,
-              // ВАЖНО: Мы меняем И original поле (чтобы наверняка), И добавляем новое
               final_price_rub: unitPrice, 
               price_at_purchase: unitPrice 
           };
       });
-  }, [items, subtotal, couponDiscount, pointsUsed]);
+  }, [items, selectedIds, subtotal, couponDiscount, pointsUsed]);
 
 
   const openCheckout = () => {
-      // 1. Проверка размеров
-      if (items.some(i => i.size === 'NOT_SELECTED' || !i.size)) {
-          window.Telegram?.WebApp?.showAlert('Сначала выберите размер для всех товаров!');
+      // 0. Проверка: выбрано ли что-то?
+      if (selectedIds.length === 0) {
+          window.Telegram?.WebApp?.showAlert('Выберите товары для оплаты!');
           return;
       }
 
-      // 2. Проверка мин. суммы (строгая)
-      // subtotal точно число благодаря parseFloat в loadCart
+      // 1. Проверка размеров (только у выбранных)
+      const selectedItems = items.filter(i => selectedIds.includes(i.id));
+      if (selectedItems.some(i => i.size === 'NOT_SELECTED' || !i.size)) {
+          window.Telegram?.WebApp?.showAlert('Выберите размер для всех отмеченных товаров!');
+          return;
+      }
+
+      // 2. Проверка мин. суммы
       if (subtotal < MIN_ORDER_AMOUNT) {
           window.Telegram?.WebApp?.showAlert(`Минимальная сумма заказа: ${MIN_ORDER_AMOUNT.toLocaleString()} ₽`);
           return;
@@ -303,23 +345,41 @@ export default function Cart({ user, dbUser, setActiveTab, onRefreshData }) {
           <div className="px-6 space-y-4">
               <div className="space-y-3">
                   {items.map(item => (
-                      <CartItem key={item.id} item={item} onEdit={setEditingItem} onDelete={handleDeleteItem} onUpdateQuantity={handleUpdateQuantity} />
+                      <CartItem 
+                        key={item.id} 
+                        item={item}
+                        // Новые пропсы для выбора
+                        isSelected={selectedIds.includes(item.id)}
+                        onToggleSelect={handleToggleSelect}
+                        // Старые пропсы
+                        onEdit={setEditingItem} 
+                        onDelete={handleDeleteItem} 
+                        onUpdateQuantity={handleUpdateQuantity} 
+                      />
                   ))}
               </div>
               <div className="h-px bg-white/5 my-4"></div>
-              <PaymentBlock 
-                  subtotal={subtotal} 
-                  total={finalTotal} 
-                  discount={couponDiscount}
-                  pointsInput={pointsInput} 
-                  setPointsInput={handlePointsChange}
-                  userPointsBalance={userPointsBalance} 
-                  handleUseMaxPoints={() => handlePointsChange(availablePointsLimit)} // Используем динамический лимит
-                  activeCouponCode={activeCoupon?.code}
-                  onOpenCoupons={() => setShowCouponModal(true)}
-                  onPay={openCheckout} 
-                  onPlayVideo={() => setVideoOpen(true)} 
-              />
+              
+              {/* Если ничего не выбрано, скрываем блок оплаты или показываем нули */}
+              {selectedIds.length > 0 ? (
+                  <PaymentBlock 
+                      subtotal={subtotal} 
+                      total={finalTotal} 
+                      discount={couponDiscount}
+                      pointsInput={pointsInput} 
+                      setPointsInput={handlePointsChange}
+                      userPointsBalance={userPointsBalance} 
+                      handleUseMaxPoints={() => handlePointsChange(availablePointsLimit)}
+                      activeCouponCode={activeCoupon?.code}
+                      onOpenCoupons={() => setShowCouponModal(true)}
+                      onPay={openCheckout} 
+                      onPlayVideo={() => setVideoOpen(true)} 
+                  />
+              ) : (
+                  <div className="text-center text-white/40 py-4 text-sm bg-white/5 rounded-xl">
+                      Выберите товары для расчета стоимости
+                  </div>
+              )}
           </div>
       )}
 
@@ -343,14 +403,17 @@ export default function Cart({ user, dbUser, setActiveTab, onRefreshData }) {
            onClose={(success) => { 
                setShowCheckout(false); 
                if(success) { 
-                   setItems([]); 
+                   // Удаляем из корзины только те, что купили
+                   setItems(prev => prev.filter(i => !selectedIds.includes(i.id)));
+                   setSelectedIds([]); // Сбрасываем выбор
+                   
                    if (onRefreshData) onRefreshData(); 
                    setActiveTab('home'); 
                } 
            }}
            user={user} dbUser={dbUser}
            total={finalTotal} 
-           items={itemsForCheckout} // Передаем пересчитанные товары
+           items={itemsForCheckout} // Передаем ТОЛЬКО ВЫБРАННЫЕ
            pointsUsed={pointsUsed} 
            couponDiscount={couponDiscount} activeCoupon={activeCoupon}
            addresses={addresses} deliveryMethod={deliveryMethod} setDeliveryMethod={setDeliveryMethod}
