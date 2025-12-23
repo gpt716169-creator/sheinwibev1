@@ -6,22 +6,16 @@ export default function OrderDetailsModal({ order, onClose }) {
 
   // --- ФУНКЦИЯ ПРИНУДИТЕЛЬНОЙ РАЗБЛОКИРОВКИ ---
   const unlockScroll = () => {
-      // 1. Снимаем inline-стили
       document.body.style.overflow = '';
       document.body.style.position = '';
       document.body.style.top = '';
       document.body.style.width = '';
-      
-      // 2. На всякий случай удаляем класс tailwind, если он был добавлен
       document.body.classList.remove('overflow-hidden');
   };
 
   // --- УПРАВЛЕНИЕ СКРОЛЛОМ ---
   useEffect(() => {
-    // БЛОКИРУЕМ при открытии
     document.body.style.overflow = 'hidden';
-    
-    // РАЗБЛОКИРУЕМ при полном удалении компонента (unmount)
     return () => {
       unlockScroll();
     };
@@ -29,14 +23,34 @@ export default function OrderDetailsModal({ order, onClose }) {
 
   // --- ОБЕРТКА ДЛЯ ЗАКРЫТИЯ ---
   const handleClose = (e) => {
-      if (e) e.stopPropagation(); // Чтобы клик не прошел сквозь
-      unlockScroll(); // Сначала разблокируем
-      onClose(); // Потом закрываем в React
+      if (e) e.stopPropagation(); 
+      unlockScroll(); 
+      onClose(); 
   };
 
   // --- ЛОГИКА ТРЕКИНГА ---
   const fullHistory = useMemo(() => {
     if (!order.created_at) return [];
+
+    // === НОВОЕ: Если ждет оплаты, показываем только это ===
+    if (order.status === 'waiting_for_pay') {
+        return [{
+            status: 'Ожидает оплаты',
+            location: 'Приложение',
+            date: order.created_at,
+            isWarning: true // Флаг для цвета
+        }];
+    }
+
+    // Если отменен
+    if (order.status === 'cancelled') {
+        return [{
+            status: 'Заказ отменен',
+            location: 'Приложение',
+            date: order.created_at,
+            isError: true
+        }];
+    }
 
     const createdDate = new Date(order.created_at);
     const now = new Date();
@@ -110,9 +124,18 @@ export default function OrderDetailsModal({ order, onClose }) {
                         ) : (
                             fullHistory.map((item, index) => {
                                 const isLatest = index === 0;
+                                
+                                // Определяем цвет кружка
+                                let dotColor = 'bg-[#151c28] border-white/30';
+                                if (isLatest) {
+                                    if (item.isWarning) dotColor = 'bg-orange-500 border-orange-500 shadow-[0_0_8px_rgba(249,115,22,0.6)]';
+                                    else if (item.isError) dotColor = 'bg-red-500 border-red-500 shadow-[0_0_8px_rgba(239,68,68,0.6)]';
+                                    else dotColor = 'bg-primary border-primary shadow-[0_0_8px_rgba(19,236,91,0.6)]';
+                                }
+
                                 return (
                                     <div key={index} className="relative flex gap-3 pb-5 last:pb-0">
-                                        <div className={`relative z-10 w-2.5 h-2.5 rounded-full border shrink-0 mt-1.5 ${isLatest ? 'bg-primary border-primary shadow-[0_0_8px_rgba(19,236,91,0.6)]' : 'bg-[#151c28] border-white/30'}`}></div>
+                                        <div className={`relative z-10 w-2.5 h-2.5 rounded-full border shrink-0 mt-1.5 ${dotColor}`}></div>
                                         <div>
                                             <p className={`text-xs font-medium leading-tight ${isLatest ? 'text-white' : 'text-white/50'}`}>
                                                 {item.status}
@@ -157,23 +180,22 @@ export default function OrderDetailsModal({ order, onClose }) {
 
                 {/* ДЕТАЛИ ЗАКАЗА */}
                 <div className="pt-3 border-t border-white/5 text-xs space-y-2">
-                     <div className="flex justify-between">
-                         <span className="text-white/50">Получатель</span>
-                         {/* --- ИСПРАВЛЕНИЕ ЗДЕСЬ: добавили contact_name --- */}
-                         <span className="text-white text-right max-w-[60%] truncate">
-                            {order.contact_name || order.user_info?.name || 'Не указано'}
-                         </span>
-                     </div>
-                     <div className="flex justify-between">
-                         <span className="text-white/50">Доставка</span>
-                         <span className="text-white text-right max-w-[60%] truncate">{order.delivery_address || 'Адрес не указан'}</span>
-                     </div>
-                     {order.tracking_number && (
-                        <div className="flex justify-between items-center pt-1">
-                            <span className="text-white/50">Трек-номер</span>
-                            <span className="font-mono bg-white/10 px-2 py-0.5 rounded text-white select-all">{order.tracking_number}</span>
-                        </div>
-                     )}
+                      <div className="flex justify-between">
+                          <span className="text-white/50">Получатель</span>
+                          <span className="text-white text-right max-w-[60%] truncate">
+                             {order.contact_name || order.user_info?.name || 'Не указано'}
+                          </span>
+                      </div>
+                      <div className="flex justify-between">
+                          <span className="text-white/50">Доставка</span>
+                          <span className="text-white text-right max-w-[60%] truncate">{order.delivery_address || 'Адрес не указан'}</span>
+                      </div>
+                      {order.tracking_number && (
+                         <div className="flex justify-between items-center pt-1">
+                             <span className="text-white/50">Трек-номер</span>
+                             <span className="font-mono bg-white/10 px-2 py-0.5 rounded text-white select-all">{order.tracking_number}</span>
+                         </div>
+                      )}
                 </div>
 
             </div>
