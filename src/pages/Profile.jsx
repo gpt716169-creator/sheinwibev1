@@ -6,6 +6,9 @@ import ReferralTab from '../components/profile/ReferralTab';
 import OrderDetailsModal from '../components/profile/OrderDetailsModal';
 import AddressModal from '../components/profile/AddressModal';
 
+// Ссылка формируется автоматически от текущего домена
+const OFFER_LINK = window.location.origin + '/offer.pdf';
+
 export default function Profile({ user, dbUser }) {
   // --- STATE ---
   const [activeTab, setActiveTab] = useState('orders'); 
@@ -112,6 +115,16 @@ export default function Profile({ user, dbUser }) {
       setIsAddressModalOpen(true);
   };
 
+  // --- ФУНКЦИЯ ОТКРЫТИЯ ОФЕРТЫ ---
+  const openOffer = () => {
+    // Используем нативный метод Telegram для открытия ссылок во внешнем браузере
+    if (window.Telegram?.WebApp?.openLink) {
+        window.Telegram.WebApp.openLink(OFFER_LINK, { try_instant_view: false });
+    } else {
+        window.open(OFFER_LINK, '_blank');
+    }
+  };
+
   // --- RENDER ---
   return (
     <div className="flex flex-col h-screen pb-24 animate-fade-in overflow-y-auto">
@@ -128,24 +141,40 @@ export default function Profile({ user, dbUser }) {
             </div>
         </div>
 
-        {/* CONTENT */}
-        {activeTab === 'orders' && (
-            <OrdersTab orders={orders} onSelectOrder={setSelectedOrder} />
-        )}
+        {/* CONTENT (С flex-1, чтобы толкать футер вниз) */}
+        <div className="flex-1">
+            {activeTab === 'orders' && (
+                <OrdersTab orders={orders} onSelectOrder={setSelectedOrder} />
+            )}
 
-        {activeTab === 'addresses' && (
-            <AddressesTab 
-                addresses={addresses} 
-                loading={loadingData} 
-                onAdd={openNewAddress} 
-                onEdit={openEditAddress} 
-                onDelete={handleDeleteAddress} 
-            />
-        )}
+            {activeTab === 'addresses' && (
+                <AddressesTab 
+                    addresses={addresses} 
+                    loading={loadingData} 
+                    onAdd={openNewAddress} 
+                    onEdit={openEditAddress} 
+                    onDelete={handleDeleteAddress} 
+                />
+            )}
 
-        {activeTab === 'referral' && (
-            <ReferralTab userId={user?.id} />
-        )}
+            {activeTab === 'referral' && (
+                <ReferralTab userId={user?.id} />
+            )}
+        </div>
+
+        {/* --- FOOTER: ОФЕРТА --- */}
+        <div className="p-6 mt-4 flex flex-col items-center justify-center opacity-50 hover:opacity-100 transition-opacity">
+            <button 
+                onClick={openOffer}
+                className="flex items-center gap-2 px-4 py-2 rounded-lg text-[10px] uppercase font-bold tracking-widest text-white/40 hover:text-white hover:bg-white/5 transition-all"
+            >
+                <span className="material-symbols-outlined text-lg">description</span>
+                Договор оферты
+            </button>
+            <div className="text-[9px] text-white/20 mt-2">
+                SHEINWIBE © 2025
+            </div>
+        </div>
 
         {/* MODALS */}
         <OrderDetailsModal 
