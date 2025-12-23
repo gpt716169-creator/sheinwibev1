@@ -26,11 +26,11 @@ export default function OrderDetailsModal({ order, onClose }) {
       onClose(); 
   };
 
-  // --- ЛОГИКА ПОВТОРНОЙ ОПЛАТЫ ---
+  // --- ЛОГИКА ПОВТОРНОЙ ОПЛАТЫ (Как в CheckoutModal) ---
   const handleRepay = async () => {
       setPaying(true);
       try {
-          // ❗ ИСПРАВЛЕНА ОПЕЧАТКА: добавлена 'k' в конце
+          // Отправляем запрос
           const res = await fetch('https://proshein.com/webhook/get-payment-link', {
               method: 'POST',
               headers: {'Content-Type': 'application/json'},
@@ -39,24 +39,24 @@ export default function OrderDetailsModal({ order, onClose }) {
 
           const json = await res.json();
 
+          // === ПРОВЕРКА КАК В КОРЗИНЕ ===
           if (json.status === 'success' && json.payment_url) {
+              // НЕ показываем алерт, сразу редирект
               window.location.href = json.payment_url;
           } else {
-              window.Telegram?.WebApp?.showAlert("Ошибка получения ссылки: " + json.message);
-              setPaying(false);
+              throw new Error(json.message || 'Ошибка генерации ссылки');
           }
+
       } catch (e) {
-          window.Telegram?.WebApp?.showAlert("Ошибка сети. Проверьте подключение.");
+          window.Telegram?.WebApp?.showAlert('Ошибка: ' + e.message);
           setPaying(false);
       }
   };
 
-  // --- ОЧИСТКА АДРЕСА (Убираем дубли "Москва г") ---
+  // --- ОЧИСТКА АДРЕСА ---
   const formatAddress = (addr) => {
       if (!addr) return 'Адрес не указан';
-      // Заменяем "Москва г, Москва г" на один раз
       let clean = addr.replace(/Москва г,\s*Москва г/gi, 'Москва г');
-      // Убираем лишние запятые в начале
       clean = clean.replace(/^,\s*/, '');
       return clean;
   };
@@ -197,7 +197,6 @@ export default function OrderDetailsModal({ order, onClose }) {
                 <div className="pt-3 border-t border-white/5 text-xs space-y-3">
                       <div className="flex flex-col gap-1">
                           <span className="text-white/50 text-[10px] uppercase font-bold">Получатель</span>
-                          {/* УБРАЛ TRUNCATE, добавил перенос слов */}
                           <span className="text-white break-words leading-tight">
                              {order.contact_name || order.user_info?.name || 'Не указано'}
                           </span>
@@ -205,7 +204,6 @@ export default function OrderDetailsModal({ order, onClose }) {
                       
                       <div className="flex flex-col gap-1">
                           <span className="text-white/50 text-[10px] uppercase font-bold">Доставка</span>
-                          {/* Используем функцию очистки адреса */}
                           <span className="text-white break-words leading-tight">
                              {formatAddress(order.delivery_address)}
                           </span>
