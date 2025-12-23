@@ -76,20 +76,79 @@ export default function Cart({ user, dbUser, setActiveTab, onRefreshData }) {
   const loadCart = async () => {
     setLoading(true);
     try {
-      const res = await fetch(`https://proshein.com/webhook/get-cart?tg_id=${user?.id}`);
-      if (!res.ok) throw new Error('Ошибка сети');
-      const json = await res.json();
-      // ВАЖНО: Принудительно превращаем цены и количество в числа
-      setItems((json.items || []).map(i => ({ 
+      // 1. Прямой запрос в базу (Мгновенно)
+      // Предлагаю создать view (представление) в Supabase или делать join, 
+      // но для начала можно просто select, если у тебя cart_items хранит всю инфу.
+      // Если cart_items ссылается на products, нужен join.
+      
+      // Допустим, у тебя cart_items содержит копию данных (как в твоем старом вебхуке)
+      const { data, error } = await supabase
+          .from('cart_items') 
+          .select('*')
+          .eq('telegram_id', user?.id);
+
+      if (error) throw error;
+
+      // Превращаем данные в нужный формат
+      const formattedItems = (data || []).map(i => ({ 
           ...i, 
           quantity: Number(i.quantity) || 1,
-          final_price_rub: Number(i.final_price_rub) || 0 
-      })));
+          final_price_rub: Number(i.final_price_rub) || 0,
+          // Важно: пока база не обновится, берем старый статус
+          is_in_stock: i.is_in_stock !== false 
+      }));
+
+      setItems(formattedItems);
+
+      // 2. ЗАПУСКАЕМ ФОНОВУЮ ПРОВЕРКУ (Fire and Forget)
+      // Мы не ждем await, чтобы интерфейс не тупил
+      if (formattedItems.length > 0) {
+          checkStockBackground(formattedItems);
+      }
+
     } catch (e) { 
         console.error("Ошибка загрузки корзины:", e); 
     } finally { 
         setLoading(false); 
     }
+  };
+
+  // Новая функция фоновой проверки
+  const checkStockBackground = async (currentItems) => {
+      try {
+          // Берем только ID и ссылки (или shein_id), чтобы не гонять лишний трафик
+          const itemsToCheck = currentItems.map(i => ({ 
+              id: i.id,           // ID записи в корзине (чтобы обновить UI)
+              product_url: i.product_url, // Ссылка для парсинга
+              shein_id: i.shein_id // ID товара Shein
+          }));
+
+          const res = await fetch('https://proshein.com/webhook/check-cart-stock', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ items: itemsToCheck })
+          });
+
+          const json = await res.json();
+
+          // Если пришли обновления, актуализируем стейт
+          if (json.updated_items && json.updated_items.length > 0) {
+              setItems(prev => prev.map(item => {
+                  const update = json.updated_items.find(u => u.shein_id === item.shein_id);
+                  if (update) {
+                      return { 
+                          ...item, 
+                          is_in_stock: update.is_in_stock 
+                          // Можно и цену обновить тут же, если изменилась
+                      };
+                  }
+                  return item;
+              }));
+          }
+      } catch (e) {
+          console.error("Ошибка фоновой проверки наличия:", e);
+          // Ошибку пользователю не показываем, пусть видит старые данные, чем ошибку
+      }
   };
 
   const loadAddresses = async () => {
