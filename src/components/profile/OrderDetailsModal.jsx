@@ -26,48 +26,30 @@ export default function OrderDetailsModal({ order, onClose }) {
       onClose(); 
   };
 
-  // --- ЛОГИКА ПОВТОРНОЙ ОПЛАТЫ (Как в CheckoutModal) ---
- const handleRepay = async () => {
-    if (paying) return;
+  // --- ЛОГИКА ПОВТОРНОЙ ОПЛАТЫ (Копия логики из Корзины) ---
+  const handleRepay = async () => {
+      setPaying(true);
+      try {
+          // Шлем запрос точно так же, как в корзине
+          const res = await fetch('https://proshein.com/webhook/get-payment-link', {
+              method: 'POST',
+              headers: {'Content-Type': 'application/json'},
+              body: JSON.stringify({ order_id: order.id })
+          });
 
-    setPaying(true);
+          const json = await res.json();
 
-    try {
-        const res = await fetch(
-          'https://proshein.com/webhook/get-payment-link',
-          {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({ order_id: order.id })
+          if (json.status === 'success' && json.payment_url) {
+              // Редирект на оплату
+              window.location.href = json.payment_url;
+          } else {
+              throw new Error(json.message || 'Ошибка получения ссылки');
           }
-        );
-
-        if (!res.ok) {
-            throw new Error(`HTTP ${res.status}`);
-        }
-
-        const json = await res.json();
-
-        if (json.status === 'success' && json.payment_url) {
-            if (window.Telegram?.WebApp?.openLink) {
-                window.Telegram.WebApp.openLink(json.payment_url);
-            } else {
-                window.location.href = json.payment_url;
-            }
-        } else {
-            throw new Error(json.message || 'Ошибка генерации ссылки');
-        }
-
-    } catch (e) {
-        if (window.Telegram?.WebApp?.showAlert) {
-            window.Telegram.WebApp.showAlert('Ошибка оплаты. Попробуйте позже.');
-        } else {
-            alert('Ошибка оплаты. Попробуйте позже.');
-        }
-    } finally {
-        setPaying(false);
-    }
-};
+      } catch (e) {
+          window.Telegram?.WebApp?.showAlert("Ошибка: " + e.message);
+          setPaying(false);
+      }
+  };
 
   // --- ОЧИСТКА АДРЕСА ---
   const formatAddress = (addr) => {
@@ -151,9 +133,8 @@ export default function OrderDetailsModal({ order, onClose }) {
                 </button>
             </div>
 
-            {/* SCROLLABLE BODY */}
+            {/* BODY */}
             <div className="overflow-y-auto p-4 space-y-5 hide-scrollbar">
-                
                 {/* ИСТОРИЯ */}
                 <div>
                     <h3 className="text-white/40 text-[10px] uppercase font-bold mb-3 tracking-wider">История статусов</h3>
@@ -209,7 +190,7 @@ export default function OrderDetailsModal({ order, onClose }) {
                     </div>
                 </div>
 
-                {/* ДЕТАЛИ ЗАКАЗА */}
+                {/* ДЕТАЛИ */}
                 <div className="pt-3 border-t border-white/5 text-xs space-y-3">
                       <div className="flex flex-col gap-1">
                           <span className="text-white/50 text-[10px] uppercase font-bold">Получатель</span>
@@ -217,14 +198,12 @@ export default function OrderDetailsModal({ order, onClose }) {
                              {order.contact_name || order.user_info?.name || 'Не указано'}
                           </span>
                       </div>
-                      
                       <div className="flex flex-col gap-1">
                           <span className="text-white/50 text-[10px] uppercase font-bold">Доставка</span>
                           <span className="text-white break-words leading-tight">
                              {formatAddress(order.delivery_address)}
                           </span>
                       </div>
-
                       {order.tracking_number && (
                          <div className="flex justify-between items-center pt-2 border-t border-white/5 mt-1">
                              <span className="text-white/50">Трек-номер</span>
@@ -240,7 +219,7 @@ export default function OrderDetailsModal({ order, onClose }) {
                      <button 
                         onClick={handleRepay} 
                         disabled={paying}
-                        className="w-full h-12 bg-primary text-[#102216] font-black rounded-xl text-base uppercase shadow-[0_0_15px_rgba(19,236,91,0.3)] active:scale-95 transition-transform flex items-center justify-center gap-2"
+                        className="w-full h-12 bg-primary text-[#102216] font-black rounded-xl text-lg uppercase shadow-[0_0_15px_rgba(19,236,91,0.3)] active:scale-95 transition-transform flex items-center justify-center gap-2"
                      >
                         {paying ? <span className="material-symbols-outlined animate-spin">progress_activity</span> : `Оплатить ${Math.floor(order.total_amount).toLocaleString()} ₽`}
                      </button>
