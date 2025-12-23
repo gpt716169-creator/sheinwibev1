@@ -6,7 +6,7 @@ export default function OrderDetailsModal({ order, onClose }) {
 
   const [paying, setPaying] = useState(false);
 
-  // --- ФУНКЦИЯ ПРИНУДИТЕЛЬНОЙ РАЗБЛОКИРОВКИ ---
+  // --- БЛОКИРОВКА СКРОЛЛА ---
   const unlockScroll = () => {
       document.body.style.overflow = '';
       document.body.style.position = '';
@@ -26,32 +26,38 @@ export default function OrderDetailsModal({ order, onClose }) {
       onClose(); 
   };
 
-  // --- ЛОГИКА ПОВТОРНОЙ ОПЛАТЫ (Копия логики из Корзины) ---
+  // --- ЛОГИКА ПОВТОРНОЙ ОПЛАТЫ ---
   const handleRepay = async () => {
       setPaying(true);
       try {
-          // Шлем запрос точно так же, как в корзине
+          // ❗ ССЫЛКА ИСПРАВЛЕНА: get-payment-link (было lin)
           const res = await fetch('https://proshein.com/webhook/get-payment-link', {
               method: 'POST',
               headers: {'Content-Type': 'application/json'},
               body: JSON.stringify({ order_id: order.id })
           });
 
+          // Проверяем, что ответ OK, прежде чем читать JSON
+          if (!res.ok) {
+              throw new Error(`Ошибка сервера: ${res.status}`);
+          }
+
           const json = await res.json();
 
           if (json.status === 'success' && json.payment_url) {
-              // Редирект на оплату
               window.location.href = json.payment_url;
           } else {
-              throw new Error(json.message || 'Ошибка получения ссылки');
+              window.Telegram?.WebApp?.showAlert("Ошибка: " + (json.message || "Некорректный ответ"));
+              setPaying(false);
           }
       } catch (e) {
-          window.Telegram?.WebApp?.showAlert("Ошибка: " + e.message);
+          console.error(e);
+          window.Telegram?.WebApp?.showAlert("Не удалось получить ссылку. Попробуйте позже.");
           setPaying(false);
       }
   };
 
-  // --- ОЧИСТКА АДРЕСА ---
+  // --- ФОРМАТИРОВАНИЕ АДРЕСА ---
   const formatAddress = (addr) => {
       if (!addr) return 'Адрес не указан';
       let clean = addr.replace(/Москва г,\s*Москва г/gi, 'Москва г');
@@ -59,7 +65,7 @@ export default function OrderDetailsModal({ order, onClose }) {
       return clean;
   };
 
-  // --- ЛОГИКА ТРЕКИНГА ---
+  // --- ИСТОРИЯ СТАТУСОВ ---
   const fullHistory = useMemo(() => {
     if (!order.created_at) return [];
 
@@ -135,6 +141,7 @@ export default function OrderDetailsModal({ order, onClose }) {
 
             {/* BODY */}
             <div className="overflow-y-auto p-4 space-y-5 hide-scrollbar">
+                
                 {/* ИСТОРИЯ */}
                 <div>
                     <h3 className="text-white/40 text-[10px] uppercase font-bold mb-3 tracking-wider">История статусов</h3>
@@ -211,9 +218,10 @@ export default function OrderDetailsModal({ order, onClose }) {
                          </div>
                       )}
                 </div>
+
             </div>
 
-            {/* FOOTER - КНОПКА ОПЛАТЫ */}
+            {/* FOOTER: ОПЛАТА */}
             <div className="p-4 bg-[#1a2333] border-t border-white/5 shrink-0">
                 {order.status === 'waiting_for_pay' ? (
                      <button 
