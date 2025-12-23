@@ -17,12 +17,18 @@ export default function Home({ user, dbUser, setActiveTab }) {
    
   // Ссылки
   const VPN_LINK = "https://t.me/hitvpnbot?start=187358585644246";
-  const SHEIN_LINK = "https://m.shein.com/"; // Универсальная ссылка
+  // Используем обычную ссылку, телефон сам поймет, что это приложение
+  const SHEIN_LINK = "https://m.shein.com/"; 
 
-  useEffect(() => {
-    if (user?.id) {
-        loadData();
-    }
+  const openShein = () => {
+      // 1. Пробуем через нативный метод Telegram
+      if (window.Telegram?.WebApp?.openLink) {
+          // try_instant_view: false - принудительно открывает во внешнем браузере
+          window.Telegram.WebApp.openLink(SHEIN_LINK, { try_instant_view: false });
+      } else {
+          // 2. Фолбэк для браузера (если открыли не в телеге)
+          window.open(SHEIN_LINK, '_blank');
+      }
   }, [user]);
 
   const loadData = async () => {
