@@ -35,8 +35,8 @@ export default function CheckoutModal({
       }
   };
 
- const handlePay = async () => {
-      // 1. Проверки (оставь свои стандартные проверки)
+  const handlePay = async () => {
+      // 1. Проверки
       if (deliveryMethod === 'ПВЗ (5Post)' && !selectedPvz) {
           window.Telegram?.WebApp?.showAlert('Выберите магазин 5Post'); return;
       }
@@ -50,7 +50,7 @@ export default function CheckoutModal({
           window.Telegram?.WebApp?.showAlert('Примите оферту'); return;
       }
 
-      // 2. Сборка адреса (твой код, который мы починили)
+      // 2. Сборка адреса
       let finalAddress = '';
       let pickupInfo = null;
       let finalPostalCode = '000000';
@@ -69,7 +69,7 @@ export default function CheckoutModal({
       setLoading(true);
       try {
           const payload = {
-            tg_id: user?.id,
+            tg_id: user?.id || 1332986231, // Fallback для тестов
             user_info: {
                 name: form.name,
                 phone: form.phone,
@@ -84,10 +84,11 @@ export default function CheckoutModal({
             final_total: total, // Сумма к оплате
             points_used: pointsUsed, 
             coupon_code: activeCoupon,
-            coupon_discount: couponDiscount
+            coupon_discount: couponDiscount,
+            discount_applied: pointsUsed + couponDiscount
           };
 
-          // Шлем на тот же вебхук, но теперь он вернет ссылку
+          // Отправляем запрос
           const res = await fetch('https://proshein.com/webhook/create-order', {
               method: 'POST',
               headers: {'Content-Type': 'application/json'},
@@ -96,8 +97,9 @@ export default function CheckoutModal({
 
           const json = await res.json();
 
+          // === ГЛАВНОЕ ИСПРАВЛЕНИЕ ===
           if (json.status === 'success' && json.payment_url) {
-              // ПЕРЕАДРЕСАЦИЯ НА РОБОКАССУ
+              // НЕ показываем алерт, сразу редирект
               window.location.href = json.payment_url;
           } else {
               throw new Error(json.message || 'Ошибка сервера');
@@ -105,52 +107,7 @@ export default function CheckoutModal({
 
       } catch (e) {
           window.Telegram?.WebApp?.showAlert('Ошибка: ' + e.message);
-          setLoading(false);
-      }
-  };
-
-      setLoading(true);
-      try {
-          const payload = {
-            tg_id: user?.id || 1332986231,
-            user_info: {
-                name: form.name,
-                phone: form.phone,
-                email: form.email,
-                address: finalAddress,
-                delivery_method: deliveryMethod,
-                pickup_point_id: pickupInfo?.id,
-                
-                // === ИЗМЕНЕНИЕ 3: Передаем найденный postal_code ===
-                postal_code: finalPostalCode 
-                // ===================================================
-            },
-            items: items,
-            items_total: (total + pointsUsed + couponDiscount), 
-            final_total: total,
-            points_used: pointsUsed,
-            coupon_code: activeCoupon,
-            coupon_discount: couponDiscount,
-            discount_applied: pointsUsed + couponDiscount
-          };
-
-          const res = await fetch('https://proshein.com/webhook/create-order', {
-              method: 'POST',
-              headers: {'Content-Type': 'application/json'},
-              body: JSON.stringify(payload)
-          });
-
-          const json = await res.json();
-          if (json.status === 'success') {
-              window.Telegram?.WebApp?.showAlert(`Заказ #${json.order_id} успешно создан!`);
-              onClose(true);
-          } else {
-              throw new Error(json.message || 'Ошибка сервера');
-          }
-      } catch (e) {
-          window.Telegram?.WebApp?.showAlert('Ошибка: ' + e.message);
-      } finally {
-          setLoading(false);
+          setLoading(false); // Снимаем загрузку только при ошибке
       }
   };
 
