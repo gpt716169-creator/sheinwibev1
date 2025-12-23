@@ -17,20 +17,16 @@ export default function Home({ user, dbUser, setActiveTab }) {
    
   // Ссылки
   const VPN_LINK = "https://t.me/hitvpnbot?start=187358585644246";
-  // Используем обычную ссылку, телефон сам поймет, что это приложение
   const SHEIN_LINK = "https://m.shein.com/"; 
 
-  const openShein = () => {
-      // 1. Пробуем через нативный метод Telegram
-      if (window.Telegram?.WebApp?.openLink) {
-          // try_instant_view: false - принудительно открывает во внешнем браузере
-          window.Telegram.WebApp.openLink(SHEIN_LINK, { try_instant_view: false });
-      } else {
-          // 2. Фолбэк для браузера (если открыли не в телеге)
-          window.open(SHEIN_LINK, '_blank');
-      }
+  // --- ЭФФЕКТЫ ---
+  useEffect(() => {
+    if (user?.id) {
+        loadData();
+    }
   }, [user]);
 
+  // --- ФУНКЦИИ ---
   const loadData = async () => {
       try {
           const res = await fetch(`https://proshein.com/webhook/get-orders?tg_id=${user?.id}`);
@@ -67,10 +63,16 @@ export default function Home({ user, dbUser, setActiveTab }) {
   };
 
   const openShein = () => {
-      // openLink открывает во внешнем браузере или приложении
-      window.Telegram?.WebApp?.openLink(SHEIN_LINK);
+      // openLink с параметром try_instant_view: false заставляет Телеграм
+      // передать ссылку системе, что позволит телефону открыть приложение Shein
+      if (window.Telegram?.WebApp?.openLink) {
+          window.Telegram.WebApp.openLink(SHEIN_LINK, { try_instant_view: false });
+      } else {
+          window.open(SHEIN_LINK, '_blank');
+      }
   };
 
+  // --- RENDER ---
   return (
     <div className="flex flex-col min-h-screen bg-transparent animate-fade-in pb-28 overflow-y-auto">
         
@@ -128,7 +130,7 @@ export default function Home({ user, dbUser, setActiveTab }) {
                     <span className="material-symbols-outlined text-white/20">chevron_right</span>
                 </div>
 
-                {/* --- НОВАЯ КНОПКА: SHEIN APP --- */}
+                {/* --- КНОПКА: SHEIN APP --- */}
                 <div 
                     onClick={openShein} 
                     className="bg-black/60 border border-white/10 rounded-2xl p-4 flex items-center gap-4 cursor-pointer hover:bg-black/80 transition-colors active:scale-[0.98]"
