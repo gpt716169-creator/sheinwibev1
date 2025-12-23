@@ -6,6 +6,13 @@ export default function OrderDetailsModal({ order, onClose }) {
 
   const [paying, setPaying] = useState(false);
 
+  // --- НОВАЯ ЛОГИКА ОТОБРАЖЕНИЯ НОМЕРА ---
+  // Если есть короткий номер -> SHEIN B-124
+  // Если нет -> #F47AC10B
+  const displayId = order.order_number 
+    ? `SHEIN B-${order.order_number}` 
+    : `#${order.id.slice(0, 8).toUpperCase()}`;
+
   // --- БЛОКИРОВКА СКРОЛЛА ---
   const unlockScroll = () => {
       document.body.style.overflow = '';
@@ -30,14 +37,12 @@ export default function OrderDetailsModal({ order, onClose }) {
   const handleRepay = async () => {
       setPaying(true);
       try {
-          // ❗ ССЫЛКА ИСПРАВЛЕНА: get-payment-link (было lin)
           const res = await fetch('https://proshein.com/webhook/get-payment-link', {
               method: 'POST',
               headers: {'Content-Type': 'application/json'},
               body: JSON.stringify({ order_id: order.id })
           });
 
-          // Проверяем, что ответ OK, прежде чем читать JSON
           if (!res.ok) {
               throw new Error(`Ошибка сервера: ${res.status}`);
           }
@@ -131,7 +136,8 @@ export default function OrderDetailsModal({ order, onClose }) {
             {/* HEADER */}
             <div className="p-4 border-b border-white/5 flex justify-between items-center bg-[#1a2333]">
                 <div>
-                    <h2 className="font-bold text-white text-sm">Заказ #{order.id.slice(0,8).toUpperCase()}</h2>
+                    {/* ЗДЕСЬ ТЕПЕРЬ displayId */}
+                    <h2 className="font-bold text-white text-sm">{displayId}</h2>
                     <p className="text-[10px] text-white/40">{formatDate(order.created_at)}</p>
                 </div>
                 <button onClick={handleClose} className="w-8 h-8 rounded-full bg-white/5 text-white flex items-center justify-center hover:bg-white/10 active:scale-95 transition-all">
@@ -212,10 +218,10 @@ export default function OrderDetailsModal({ order, onClose }) {
                           </span>
                       </div>
                       {order.tracking_number && (
-                         <div className="flex justify-between items-center pt-2 border-t border-white/5 mt-1">
-                             <span className="text-white/50">Трек-номер</span>
-                             <span className="font-mono bg-white/10 px-2 py-0.5 rounded text-white select-all">{order.tracking_number}</span>
-                         </div>
+                          <div className="flex justify-between items-center pt-2 border-t border-white/5 mt-1">
+                              <span className="text-white/50">Трек-номер</span>
+                              <span className="font-mono bg-white/10 px-2 py-0.5 rounded text-white select-all">{order.tracking_number}</span>
+                          </div>
                       )}
                 </div>
 
@@ -224,13 +230,13 @@ export default function OrderDetailsModal({ order, onClose }) {
             {/* FOOTER: ОПЛАТА */}
             <div className="p-4 bg-[#1a2333] border-t border-white/5 shrink-0">
                 {order.status === 'waiting_for_pay' ? (
-                     <button 
+                      <button 
                         onClick={handleRepay} 
                         disabled={paying}
                         className="w-full h-12 bg-primary text-[#102216] font-black rounded-xl text-lg uppercase shadow-[0_0_15px_rgba(19,236,91,0.3)] active:scale-95 transition-transform flex items-center justify-center gap-2"
-                     >
+                      >
                         {paying ? <span className="material-symbols-outlined animate-spin">progress_activity</span> : `Оплатить ${Math.floor(order.total_amount).toLocaleString()} ₽`}
-                     </button>
+                      </button>
                 ) : (
                     <div className="flex justify-between items-center">
                         <span className="text-sm text-white/60">Итого:</span>
