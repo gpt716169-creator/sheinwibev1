@@ -75,7 +75,7 @@ function App() {
     if (!userData || !userData.id) return;
 
     try {
-        const res = await fetch('https://proshein.com/webhook/init-user', {
+        const res = await fetch('https://sheinwibe.ru/webhook/init-user', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
