@@ -89,7 +89,7 @@ export default function CheckoutModal({
           };
 
           // Отправляем запрос
-          const res = await fetch('https://proshein.com/webhook/create-order', {
+          const res = await fetch('https://sheinwibe.ru/webhook/create-order', {
               method: 'POST',
               headers: {'Content-Type': 'application/json'},
               body: JSON.stringify(payload)
