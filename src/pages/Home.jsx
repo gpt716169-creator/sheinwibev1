@@ -31,7 +31,7 @@ export default function Home({ user, dbUser, setActiveTab }) {
   // --- ФУНКЦИИ ---
   const loadData = async () => {
       try {
-          const res = await fetch(`https://proshein.com/webhook/get-orders?tg_id=${user?.id}`);
+          const res = await fetch(`https://sheinwibe.ru/webhook/get-orders?tg_id=${user?.id}`);
           const json = await res.json();
           setActiveOrders(json.orders || json.items || []);
       } catch (e) { console.error("Err loading orders", e); }
@@ -40,7 +40,7 @@ export default function Home({ user, dbUser, setActiveTab }) {
   const handleSearch = async (link) => {
       window.Telegram?.WebApp?.MainButton.showProgress();
       try {
-          const res = await fetch('https://proshein.com/webhook/parse-item', {
+          const res = await fetch('https://sheinwibe.ru/webhook/parse-item', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ link, tg_id: user?.id })
