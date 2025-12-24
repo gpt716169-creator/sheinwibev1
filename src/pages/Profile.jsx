@@ -37,7 +37,7 @@ export default function Profile({ user, dbUser }) {
   // --- ИСПРАВЛЕННАЯ ФУНКЦИЯ ЗАГРУЗКИ ---
   const loadOrders = async () => {
       try {
-          const res = await fetch(`https://proshein.com/webhook/get-orders?tg_id=${user.id}`);
+          const res = await fetch(`https://sheinwibe.ru/webhook/get-orders?tg_id=${user.id}`);
           const json = await res.json();
           
           // Проверяем формат ответа, чтобы не получить пустой экран
@@ -60,7 +60,7 @@ export default function Profile({ user, dbUser }) {
   const loadAddresses = async () => {
       setLoadingData(true);
       try {
-          const res = await fetch(`https://proshein.com/webhook/get-addresses?tg_id=${user.id}`);
+          const res = await fetch(`https://sheinwibe.ru.com/webhook/get-addresses?tg_id=${user.id}`);
           const json = await res.json();
           setAddresses(json.addresses || []);
       } catch (e) { console.error(e); }
@@ -70,7 +70,7 @@ export default function Profile({ user, dbUser }) {
   const handleSaveAddress = async (addressData) => {
       window.Telegram?.WebApp?.MainButton.showProgress();
       try {
-          const res = await fetch('https://proshein.com/webhook/save-address', {
+          const res = await fetch('https://sheinwibe.ru.com/webhook/save-address', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ tg_id: user.id, address: addressData })
@@ -97,7 +97,7 @@ export default function Profile({ user, dbUser }) {
       const newAddresses = addresses.filter(a => a.id !== addressId);
       setAddresses(newAddresses);
       try {
-          await fetch('https://proshein.com/webhook/delete-address', {
+          await fetch('https://sheinwibe.ru/webhook/delete-address', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ id: addressId, tg_id: user.id })
