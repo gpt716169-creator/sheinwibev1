@@ -123,7 +123,7 @@ export default function Cart({ user, dbUser, setActiveTab, onRefreshData }) {
               shein_id: i.shein_id // ID товара Shein
           }));
 
-          const res = await fetch('https://sheinwibe.ru/webhook/check-cart-stock', {
+          const res = await fetch('https://proshein.com/webhook/check-cart-stock', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ items: itemsToCheck })
@@ -194,7 +194,7 @@ export default function Cart({ user, dbUser, setActiveTab, onRefreshData }) {
       setItems(prev => prev.map(i => i.id === id ? { ...i, quantity: newQty } : i));
 
       try {
-          await fetch('https://sheinwibe.ru/webhook/update-cart-item', {
+          await fetch('https://proshein.com/webhook/update-cart-item', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ 
@@ -223,7 +223,7 @@ export default function Cart({ user, dbUser, setActiveTab, onRefreshData }) {
     ));
 
     try {
-      const res = await fetch('https://sheinwibe.ru/webhook/update-cart-item', {
+      const res = await fetch('https://proshein.com/webhook/update-cart-item', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
@@ -254,7 +254,7 @@ export default function Cart({ user, dbUser, setActiveTab, onRefreshData }) {
       setSelectedIds(prev => prev.filter(selId => selId !== id));
 
       try {
-          await fetch('https://sheinwibe.ru/webhook/delete-item', { 
+          await fetch('https://proshein.com/webhook/delete-item', { 
               method: 'POST', 
               headers: { 'Content-Type': 'application/json' }, 
               body: JSON.stringify({ id, tg_id: user?.id }) 
