@@ -5,170 +5,173 @@ import AddressesTab from '../components/profile/AddressesTab';
 import ReferralTab from '../components/profile/ReferralTab';
 import OrderDetailsModal from '../components/profile/OrderDetailsModal';
 import AddressModal from '../components/profile/AddressModal';
+import { useAppContext } from '../context/AppContext';
+import { API_BASE_URL } from '../config/constants';
 
 const OFFER_LINK = window.location.origin + '/offer.pdf';
 
-export default function Profile({ user, dbUser }) {
-  const [activeTab, setActiveTab] = useState('orders'); 
-  const [orders, setOrders] = useState([]);
-  const [addresses, setAddresses] = useState([]);
-  const [loadingData, setLoadingData] = useState(false);
-  
-  // Modals
-  const [selectedOrder, setSelectedOrder] = useState(null);
-  const [isAddressModalOpen, setIsAddressModalOpen] = useState(false);
-  const [editingAddress, setEditingAddress] = useState(null);
+export default function Profile() {
+    const { tgUser: user, dbUser } = useAppContext();
+    const [activeTab, setActiveTab] = useState('orders');
+    const [orders, setOrders] = useState([]);
+    const [addresses, setAddresses] = useState([]);
+    const [loadingData, setLoadingData] = useState(false);
 
-  useEffect(() => {
-    const redirectTab = sessionStorage.getItem('open_profile_tab');
-    if (redirectTab === 'addresses') {
-        setActiveTab('addresses');
-        sessionStorage.removeItem('open_profile_tab'); 
-    }
-  }, []);
+    // Modals
+    const [selectedOrder, setSelectedOrder] = useState(null);
+    const [isAddressModalOpen, setIsAddressModalOpen] = useState(false);
+    const [editingAddress, setEditingAddress] = useState(null);
 
-  useEffect(() => {
-    if (user?.id) {
-        loadOrders();
-        loadAddresses();
-    }
-  }, [user]);
+    useEffect(() => {
+        const redirectTab = sessionStorage.getItem('open_profile_tab');
+        if (redirectTab === 'addresses') {
+            setActiveTab('addresses');
+            sessionStorage.removeItem('open_profile_tab');
+        }
+    }, []);
 
-  // --- ИСПРАВЛЕННАЯ ФУНКЦИЯ ЗАГРУЗКИ ---
-  const loadOrders = async () => {
-      try {
-          const res = await fetch(`https://proshein.com/webhook/get-orders?tg_id=${user.id}`);
-          const json = await res.json();
-          
-          // Проверяем формат ответа, чтобы не получить пустой экран
-          let data = [];
-          if (Array.isArray(json)) {
-             data = json; // Если пришел чистый массив
-          } else if (json.orders) {
-             data = json.orders; // Если пришел объект { orders: [...] }
-          } else if (json.items) {
-             data = json.items; 
-          }
-          
-          setOrders(data || []);
-      } catch (e) { 
-          console.error("Ошибка загрузки заказов:", e); 
-      }
-  };
-  // -------------------------------------
+    useEffect(() => {
+        if (user?.id) {
+            loadOrders();
+            loadAddresses();
+        }
+    }, [user]);
 
-  const loadAddresses = async () => {
-      setLoadingData(true);
-      try {
-          const res = await fetch(`https://proshein.com/webhook/get-addresses?tg_id=${user.id}`);
-          const json = await res.json();
-          setAddresses(json.addresses || []);
-      } catch (e) { console.error(e); }
-      finally { setLoadingData(false); }
-  };
+    // --- ИСПРАВЛЕННАЯ ФУНКЦИЯ ЗАГРУЗКИ ---
+    const loadOrders = async () => {
+        try {
+            const res = await fetch(`${API_BASE_URL}/get-orders?tg_id=${user.id}`);
+            const json = await res.json();
 
-  const handleSaveAddress = async (addressData) => {
-      window.Telegram?.WebApp?.MainButton.showProgress();
-      try {
-          const res = await fetch('https://proshein.com/webhook/save-address', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ tg_id: user.id, address: addressData })
-          });
-          const json = await res.json();
-          if (json.status === 'success') {
-              window.Telegram?.WebApp?.HapticFeedback.notificationOccurred('success');
-              setIsAddressModalOpen(false);
-              setEditingAddress(null);
-              loadAddresses(); 
-          } else {
-              window.Telegram?.WebApp?.showAlert("Ошибка: " + json.message);
-          }
-      } catch (e) {
-          window.Telegram?.WebApp?.showAlert("Ошибка сохранения");
-      } finally {
-          window.Telegram?.WebApp?.MainButton.hideProgress();
-      }
-  };
+            // Проверяем формат ответа, чтобы не получить пустой экран
+            let data = [];
+            if (Array.isArray(json)) {
+                data = json; // Если пришел чистый массив
+            } else if (json.orders) {
+                data = json.orders; // Если пришел объект { orders: [...] }
+            } else if (json.items) {
+                data = json.items;
+            }
 
-  const handleDeleteAddress = async (addressId, e) => {
-      e.stopPropagation();
-      if(!window.confirm("Вы точно хотите удалить этот адрес?")) return;
-      const newAddresses = addresses.filter(a => a.id !== addressId);
-      setAddresses(newAddresses);
-      try {
-          await fetch('https://proshein.com/webhook/delete-address', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ id: addressId, tg_id: user.id })
-          });
-      } catch (e) { loadAddresses(); }
-  };
+            setOrders(data || []);
+        } catch (e) {
+            console.error("Ошибка загрузки заказов:", e);
+        }
+    };
+    // -------------------------------------
 
-  const openNewAddress = () => { setEditingAddress(null); setIsAddressModalOpen(true); };
-  const openEditAddress = (addr) => { setEditingAddress(addr); setIsAddressModalOpen(true); };
+    const loadAddresses = async () => {
+        setLoadingData(true);
+        try {
+            const res = await fetch(`${API_BASE_URL}/get-addresses?tg_id=${user.id}`);
+            const json = await res.json();
+            setAddresses(json.addresses || []);
+        } catch (e) { console.error(e); }
+        finally { setLoadingData(false); }
+    };
 
-  const openOffer = () => {
-    if (window.Telegram?.WebApp?.openLink) {
-        window.Telegram.WebApp.openLink(OFFER_LINK, { try_instant_view: false });
-    } else {
-        window.open(OFFER_LINK, '_blank');
-    }
-  };
+    const handleSaveAddress = async (addressData) => {
+        window.Telegram?.WebApp?.MainButton.showProgress();
+        try {
+            const res = await fetch(`${API_BASE_URL}/save-address`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ tg_id: user.id, address: addressData })
+            });
+            const json = await res.json();
+            if (json.status === 'success') {
+                window.Telegram?.WebApp?.HapticFeedback.notificationOccurred('success');
+                setIsAddressModalOpen(false);
+                setEditingAddress(null);
+                loadAddresses();
+            } else {
+                window.Telegram?.WebApp?.showAlert("Ошибка: " + json.message);
+            }
+        } catch (e) {
+            window.Telegram?.WebApp?.showAlert("Ошибка сохранения");
+        } finally {
+            window.Telegram?.WebApp?.MainButton.hideProgress();
+        }
+    };
 
-  return (
-    <div className="flex flex-col h-screen pb-24 animate-fade-in overflow-y-auto">
-        <ProfileHeader user={user} dbUser={dbUser} />
+    const handleDeleteAddress = async (addressId, e) => {
+        e.stopPropagation();
+        if (!window.confirm("Вы точно хотите удалить этот адрес?")) return;
+        const newAddresses = addresses.filter(a => a.id !== addressId);
+        setAddresses(newAddresses);
+        try {
+            await fetch(`${API_BASE_URL}/delete-address`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id: addressId, tg_id: user.id })
+            });
+        } catch (e) { loadAddresses(); }
+    };
 
-        <div className="px-6 mb-6 shrink-0">
-            <div className="flex bg-white/5 p-1 rounded-xl border border-white/5">
-                <button onClick={() => setActiveTab('orders')} className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all ${activeTab === 'orders' ? 'bg-white/10 text-white shadow-sm' : 'text-white/40'}`}>Заказы</button>
-                <button onClick={() => setActiveTab('addresses')} className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all ${activeTab === 'addresses' ? 'bg-white/10 text-white shadow-sm' : 'text-white/40'}`}>Адреса</button>
-                <button onClick={() => setActiveTab('referral')} className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all ${activeTab === 'referral' ? 'bg-white/10 text-white shadow-sm' : 'text-white/40'}`}>Друзья</button>
+    const openNewAddress = () => { setEditingAddress(null); setIsAddressModalOpen(true); };
+    const openEditAddress = (addr) => { setEditingAddress(addr); setIsAddressModalOpen(true); };
+
+    const openOffer = () => {
+        if (window.Telegram?.WebApp?.openLink) {
+            window.Telegram.WebApp.openLink(OFFER_LINK, { try_instant_view: false });
+        } else {
+            window.open(OFFER_LINK, '_blank');
+        }
+    };
+
+    return (
+        <div className="flex flex-col h-screen pb-24 animate-fade-in overflow-y-auto">
+            <ProfileHeader user={user} dbUser={dbUser} />
+
+            <div className="px-6 mb-6 shrink-0">
+                <div className="flex bg-white/5 p-1 rounded-xl border border-white/5">
+                    <button onClick={() => setActiveTab('orders')} className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all ${activeTab === 'orders' ? 'bg-white/10 text-white shadow-sm' : 'text-white/40'}`}>Заказы</button>
+                    <button onClick={() => setActiveTab('addresses')} className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all ${activeTab === 'addresses' ? 'bg-white/10 text-white shadow-sm' : 'text-white/40'}`}>Адреса</button>
+                    <button onClick={() => setActiveTab('referral')} className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all ${activeTab === 'referral' ? 'bg-white/10 text-white shadow-sm' : 'text-white/40'}`}>Друзья</button>
+                </div>
             </div>
+
+            <div className="flex-1">
+                {activeTab === 'orders' && (
+                    // ТЕПЕРЬ ВСЕ РАБОТАЕТ: orders передаются, а клик обрабатывает Profile (открывая модалку)
+                    <OrdersTab orders={orders} onSelectOrder={setSelectedOrder} />
+                )}
+
+                {activeTab === 'addresses' && (
+                    <AddressesTab
+                        addresses={addresses}
+                        loading={loadingData}
+                        onAdd={openNewAddress}
+                        onEdit={openEditAddress}
+                        onDelete={handleDeleteAddress}
+                    />
+                )}
+
+                {activeTab === 'referral' && (
+                    <ReferralTab userId={user?.id} />
+                )}
+            </div>
+
+            <div className="p-6 mt-4 flex flex-col items-center justify-center opacity-50 hover:opacity-100 transition-opacity">
+                <button onClick={openOffer} className="flex items-center gap-2 px-4 py-2 rounded-lg text-[10px] uppercase font-bold tracking-widest text-white/40 hover:text-white hover:bg-white/5 transition-all">
+                    <span className="material-symbols-outlined text-lg">description</span>
+                    Договор оферты
+                </button>
+                <div className="text-[9px] text-white/20 mt-2">SHEINWIBE © 2025</div>
+            </div>
+
+            <OrderDetailsModal
+                order={selectedOrder}
+                onClose={() => setSelectedOrder(null)}
+            />
+
+            <AddressModal
+                isOpen={isAddressModalOpen}
+                onClose={() => setIsAddressModalOpen(false)}
+                editingAddress={editingAddress}
+                user={user}
+                onSave={handleSaveAddress}
+            />
         </div>
-
-        <div className="flex-1">
-            {activeTab === 'orders' && (
-                // ТЕПЕРЬ ВСЕ РАБОТАЕТ: orders передаются, а клик обрабатывает Profile (открывая модалку)
-                <OrdersTab orders={orders} onSelectOrder={setSelectedOrder} />
-            )}
-
-            {activeTab === 'addresses' && (
-                <AddressesTab 
-                    addresses={addresses} 
-                    loading={loadingData} 
-                    onAdd={openNewAddress} 
-                    onEdit={openEditAddress} 
-                    onDelete={handleDeleteAddress} 
-                />
-            )}
-
-            {activeTab === 'referral' && (
-                <ReferralTab userId={user?.id} />
-            )}
-        </div>
-
-        <div className="p-6 mt-4 flex flex-col items-center justify-center opacity-50 hover:opacity-100 transition-opacity">
-            <button onClick={openOffer} className="flex items-center gap-2 px-4 py-2 rounded-lg text-[10px] uppercase font-bold tracking-widest text-white/40 hover:text-white hover:bg-white/5 transition-all">
-                <span className="material-symbols-outlined text-lg">description</span>
-                Договор оферты
-            </button>
-            <div className="text-[9px] text-white/20 mt-2">SHEINWIBE © 2025</div>
-        </div>
-
-        <OrderDetailsModal 
-            order={selectedOrder} 
-            onClose={() => setSelectedOrder(null)} 
-        />
-        
-        <AddressModal 
-            isOpen={isAddressModalOpen} 
-            onClose={() => setIsAddressModalOpen(false)} 
-            editingAddress={editingAddress} 
-            user={user} 
-            onSave={handleSaveAddress} 
-        />
-    </div>
-  );
+    );
 }

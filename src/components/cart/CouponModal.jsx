@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { createPortal } from 'react-dom'; // <--- 1. Импортируем Portal
+import { createPortal } from 'react-dom';
+import { API_BASE_URL } from '../../config/constants';
 
 export default function CouponModal({ userId, subtotal, onClose, onApply, activeCouponCode }) {
     const [coupons, setCoupons] = useState([]);
@@ -22,9 +23,9 @@ export default function CouponModal({ userId, subtotal, onClose, onApply, active
         try {
             const tgId = userId || 1332986231;
             // Убедись, что путь совпадает с твоим рабочим вебхуком
-            const res = await fetch(`https://proshein.com/webhook/get-user-coupons?tg_id=${tgId}`);
+            const res = await fetch(`${API_BASE_URL}/get-user-coupons?tg_id=${tgId}`);
             const json = await res.json();
-            
+
             if (json.status === 'success') {
                 setCoupons(json.coupons || []);
             }
@@ -38,10 +39,10 @@ export default function CouponModal({ userId, subtotal, onClose, onApply, active
     const handleManualSubmit = () => {
         if (!manualCode) return;
         setChecking(true);
-        
+
         const codeUpper = manualCode.toUpperCase().trim();
         const found = coupons.find(c => c.code === codeUpper);
-        
+
         if (found) {
             onApply(found);
             setChecking(false);
@@ -57,14 +58,14 @@ export default function CouponModal({ userId, subtotal, onClose, onApply, active
         <div className="fixed inset-0 z-[99999] flex flex-col animate-fade-in" style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0 }}>
             {/* Фон (Backdrop) */}
             <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={onClose}></div>
-            
+
             {/* Контент модалки */}
             {/* Добавил mt-auto, чтобы на больших экранах выезжало снизу, а на телефоне было на весь экран */}
             <div className="relative z-10 flex flex-col w-full h-full bg-[#101622] md:h-auto md:max-h-[85vh] md:rounded-t-3xl md:mt-auto shadow-2xl">
-                
+
                 {/* --- ФИКСИРОВАННАЯ ВЕРХНЯЯ ЧАСТЬ --- */}
                 <div className="bg-[#101622] z-20 border-b border-white/5 shrink-0 rounded-t-3xl">
-                    
+
                     {/* 1. Заголовок и Закрыть */}
                     <div className="flex items-center justify-between px-6 pt-6 pb-2">
                         <button onClick={onClose} className="flex w-10 h-10 items-center justify-center rounded-full glass text-white hover:bg-white/10 active:scale-90 transition-transform">
@@ -79,14 +80,14 @@ export default function CouponModal({ userId, subtotal, onClose, onApply, active
                         <div className="bg-[#1a2333] p-3 rounded-2xl border border-white/10">
                             <p className="text-white/50 text-[10px] mb-2 font-bold uppercase tracking-wider ml-1">Ввести промокод</p>
                             <div className="flex gap-2">
-                                <input 
+                                <input
                                     value={manualCode}
                                     onChange={(e) => setManualCode(e.target.value)}
-                                    className="custom-input flex-1 h-12 rounded-xl px-4 text-sm uppercase font-bold tracking-widest text-center placeholder:font-normal placeholder:tracking-normal placeholder:text-white/20 bg-[#101622] border-none focus:ring-1 focus:ring-primary/50" 
-                                    placeholder="CODE" 
+                                    className="custom-input flex-1 h-12 rounded-xl px-4 text-sm uppercase font-bold tracking-widest text-center placeholder:font-normal placeholder:tracking-normal placeholder:text-white/20 bg-[#101622] border-none focus:ring-1 focus:ring-primary/50"
+                                    placeholder="CODE"
                                 />
-                                <button 
-                                    onClick={handleManualSubmit} 
+                                <button
+                                    onClick={handleManualSubmit}
                                     disabled={!manualCode || checking}
                                     className="bg-white/10 text-white w-12 rounded-xl flex items-center justify-center hover:bg-primary hover:text-[#102216] transition-all disabled:opacity-30 active:scale-95"
                                 >
@@ -107,26 +108,26 @@ export default function CouponModal({ userId, subtotal, onClose, onApply, active
                         <h3 className="text-white font-bold mb-4 flex items-center gap-2 px-1 text-sm uppercase tracking-wider text-white/50">
                             Доступные купоны
                         </h3>
-                        
+
                         {loading ? (
-                             <div className="space-y-3">
-                                 <div className="h-24 bg-white/5 rounded-xl animate-pulse"></div>
-                                 <div className="h-24 bg-white/5 rounded-xl animate-pulse"></div>
-                             </div>
+                            <div className="space-y-3">
+                                <div className="h-24 bg-white/5 rounded-xl animate-pulse"></div>
+                                <div className="h-24 bg-white/5 rounded-xl animate-pulse"></div>
+                            </div>
                         ) : coupons.length === 0 ? (
-                             <div className="flex flex-col items-center justify-center py-10 opacity-50 border-2 border-dashed border-white/10 rounded-xl">
-                                 <span className="material-symbols-outlined text-4xl mb-2">sentiment_dissatisfied</span>
-                                 <p className="text-sm">Нет доступных купонов</p>
-                             </div>
+                            <div className="flex flex-col items-center justify-center py-10 opacity-50 border-2 border-dashed border-white/10 rounded-xl">
+                                <span className="material-symbols-outlined text-4xl mb-2">sentiment_dissatisfied</span>
+                                <p className="text-sm">Нет доступных купонов</p>
+                            </div>
                         ) : (
-                            <div className="space-y-3 pb-10"> 
+                            <div className="space-y-3 pb-10">
                                 {coupons.map(c => {
                                     const isActive = activeCouponCode === c.code;
                                     const isApplicable = subtotal >= (c.min_order_amount || 0);
-                                    
+
                                     return (
-                                        <div 
-                                            key={c.id || c.code} 
+                                        <div
+                                            key={c.id || c.code}
                                             onClick={() => isApplicable && onApply(c)}
                                             className={`relative overflow-hidden transition-all duration-300 group
                                                 ${isApplicable ? 'cursor-pointer active:scale-[0.98]' : 'opacity-60 grayscale cursor-not-allowed'}
@@ -137,13 +138,13 @@ export default function CouponModal({ userId, subtotal, onClose, onApply, active
                                             <div className="flex h-full min-h-[90px]">
                                                 {/* Левая часть (Сумма) */}
                                                 <div className="w-[90px] flex flex-col items-center justify-center bg-black/20 border-r border-dashed border-white/10 relative">
-                                                     {/* Круги выреза */}
-                                                     <div className="absolute -top-3 left-1/2 -translate-x-1/2 w-4 h-4 bg-[#101622] rounded-full"></div>
-                                                     <div className="absolute -bottom-3 left-1/2 -translate-x-1/2 w-4 h-4 bg-[#101622] rounded-full"></div>
-                                                     
-                                                     <span className={`text-lg font-black ${isApplicable ? 'text-white' : 'text-white/50'}`}>
+                                                    {/* Круги выреза */}
+                                                    <div className="absolute -top-3 left-1/2 -translate-x-1/2 w-4 h-4 bg-[#101622] rounded-full"></div>
+                                                    <div className="absolute -bottom-3 left-1/2 -translate-x-1/2 w-4 h-4 bg-[#101622] rounded-full"></div>
+
+                                                    <span className={`text-lg font-black ${isApplicable ? 'text-white' : 'text-white/50'}`}>
                                                         {c.type === 'percent' ? `-${c.discount_amount}%` : `${c.discount_amount}₽`}
-                                                     </span>
+                                                    </span>
                                                 </div>
 
                                                 {/* Правая часть (Инфо) */}
