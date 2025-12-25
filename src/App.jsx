@@ -50,6 +50,9 @@ function App() {
           <Route path={ROUTES.HOME} element={<Home />} />
           <Route path={ROUTES.CART} element={<Cart />} />
           <Route path={ROUTES.PROFILE} element={<Profile />} />
+          <Route path={ROUTES.SUCCESS} element={<div className="flex items-center justify-center h-screen"><span className="loader">Обработка платежа...</span></div>} />
+          <Route path={ROUTES.FAIL} element={<div className="flex items-center justify-center h-screen"><span className="loader">Обработка...</span></div>} />
+          <Route path="*" element={<Home />} />
         </Routes>
       </div>
 
