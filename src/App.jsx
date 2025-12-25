@@ -17,29 +17,26 @@ function App() {
 
   // --- НОВОЕ: ПРОВЕРКА ВОЗВРАТА С ОПЛАТЫ (ПО ПУТИ URL) ---
   useEffect(() => {
-    // Читаем путь из адресной строки (например, "/success")
-    const path = window.location.pathname;
+    // Читаем путь (используем window.location для доступа до инициализации роутера)
+    const currentPath = window.location.pathname;
 
-    // Проверяем на успех (учитываем возможный слеш в конце)
-    if (path === ROUTES.SUCCESS || path === ROUTES.SUCCESS + '/') {
-      // 1. Показываем сообщение
+    // Используем includes, чтобы поймать /success/ или /success?id=...
+    if (currentPath.includes(ROUTES.SUCCESS)) {
       window.Telegram?.WebApp?.showAlert("Оплата прошла успешно! Ваш заказ принят в работу.");
 
-      // 2. Перекидываем в профиль
-      navigate(ROUTES.PROFILE);
-
-      // 3. Чистим URL (возвращаем на главную, чтобы при обновлении не всплывало снова)
-      // В React Router лучше просто сделать replace
-      navigate(ROUTES.PROFILE, { replace: true });
+      // Задержка, чтобы дать UI время на отрисовку
+      setTimeout(() => {
+        navigate(ROUTES.PROFILE, { replace: true });
+      }, 500);
     }
-    // Проверяем на ошибку
-    else if (path === ROUTES.FAIL || path === ROUTES.FAIL + '/') {
+    else if (currentPath.includes(ROUTES.FAIL)) {
       window.Telegram?.WebApp?.showAlert("Оплата не прошла или была отменена.");
 
-      // Возвращаем в корзину
-      navigate(ROUTES.CART);
+      setTimeout(() => {
+        navigate(ROUTES.CART, { replace: true });
+      }, 500);
     }
-  }, []); // Оставляем пустым, так как это только при монтировании
+  }, []); // Запускаем один раз при старте
 
   return (
     <div className="min-h-screen bg-luxury-gradient text-white overflow-hidden font-display">
