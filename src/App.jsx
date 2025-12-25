@@ -4,6 +4,7 @@ import BottomNav from './components/BottomNav';
 import Home from './pages/Home';
 import Cart from './pages/Cart';
 import Profile from './pages/Profile';
+import SuccessPage from './pages/SuccessPage'; // Импортируем новую страницу
 import { ROUTES } from './config/constants';
 
 function App() {
@@ -15,28 +16,8 @@ function App() {
     window.scrollTo(0, 0);
   }, [location.pathname]);
 
-  // --- НОВОЕ: ПРОВЕРКА ВОЗВРАТА С ОПЛАТЫ (ПО ПУТИ URL) ---
-  useEffect(() => {
-    // Читаем путь (используем window.location для доступа до инициализации роутера)
-    const currentPath = window.location.pathname;
-
-    // Используем includes, чтобы поймать /success/ или /success?id=...
-    if (currentPath.includes(ROUTES.SUCCESS)) {
-      window.Telegram?.WebApp?.showAlert("Оплата прошла успешно! Ваш заказ принят в работу.");
-
-      // Задержка, чтобы дать UI время на отрисовку
-      setTimeout(() => {
-        navigate(ROUTES.PROFILE, { replace: true });
-      }, 500);
-    }
-    else if (currentPath.includes(ROUTES.FAIL)) {
-      window.Telegram?.WebApp?.showAlert("Оплата не прошла или была отменена.");
-
-      setTimeout(() => {
-        navigate(ROUTES.CART, { replace: true });
-      }, 500);
-    }
-  }, []); // Запускаем один раз при старте
+  // Мы УБРАЛИ useEffect с редиректом отсюда полностью.
+  // Теперь логика находится внутри самих компонентов SuccessPage и (по аналогии) FailPage.
 
   return (
     <div className="min-h-screen bg-luxury-gradient text-white overflow-hidden font-display">
@@ -47,8 +28,19 @@ function App() {
           <Route path={ROUTES.HOME} element={<Home />} />
           <Route path={ROUTES.CART} element={<Cart />} />
           <Route path={ROUTES.PROFILE} element={<Profile />} />
-          <Route path={ROUTES.SUCCESS} element={<div className="flex items-center justify-center h-screen"><span className="loader">Обработка платежа...</span></div>} />
-          <Route path={ROUTES.FAIL} element={<div className="flex items-center justify-center h-screen"><span className="loader">Обработка...</span></div>} />
+
+          {/* Используем полноценный компонент */}
+          <Route path={ROUTES.SUCCESS} element={<SuccessPage />} />
+
+          {/* Для ошибки можно оставить пока простую заглушку или тоже сделать компонент */}
+          <Route path={ROUTES.FAIL} element={
+            <div className="flex flex-col items-center justify-center h-screen text-center p-6">
+              <span className="material-symbols-outlined text-5xl text-red-500 mb-4">error</span>
+              <h1 className="text-xl font-bold mb-2">Оплата не прошла</h1>
+              <button onClick={() => navigate(ROUTES.CART)} className="mt-4 bg-white/10 px-6 py-2 rounded-lg">Вернуться в корзину</button>
+            </div>
+          } />
+
           <Route path="*" element={<Home />} />
         </Routes>
       </div>
