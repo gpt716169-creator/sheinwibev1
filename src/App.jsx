@@ -5,6 +5,7 @@ import Home from './pages/Home';
 import Cart from './pages/Cart';
 import Profile from './pages/Profile';
 import SuccessPage from './pages/SuccessPage';
+import Resale from './pages/Resale'; // <-- NEW
 import { ROUTES } from './config/constants';
 
 function App() {
@@ -49,6 +50,7 @@ function App() {
           <Route path={ROUTES.HOME} element={<Home />} />
           <Route path={ROUTES.CART} element={<Cart />} />
           <Route path={ROUTES.PROFILE} element={<Profile />} />
+          <Route path={ROUTES.RESALE} element={<Resale />} />
 
           <Route path={ROUTES.SUCCESS} element={<SuccessPage />} />
 

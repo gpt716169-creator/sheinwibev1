@@ -11,5 +11,6 @@ export const ROUTES = {
     CART: '/cart',
     PROFILE: '/profile',
     SUCCESS: '/success',
-    FAIL: '/fail'
+    FAIL: '/fail',
+    RESALE: '/resale'
 };

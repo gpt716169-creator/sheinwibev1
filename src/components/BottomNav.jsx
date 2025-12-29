@@ -5,6 +5,7 @@ import { ROUTES } from '../config/constants';
 export default function BottomNav() {
   const tabs = [
     { id: 'home', icon: 'home', path: ROUTES.HOME },
+    { id: 'resale', icon: 'storefront', path: ROUTES.RESALE }, // <-- NEW
     { id: 'cart', icon: 'shopping_bag', isCenter: true, path: ROUTES.CART },
     { id: 'profile', icon: 'person', path: ROUTES.PROFILE }
   ];
