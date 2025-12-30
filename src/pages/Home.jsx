@@ -147,38 +147,54 @@ export default function Home() {
                     </div>
 
                     {/* --- FEATURES BUTTONS (BOTTOM) --- */}
-                    <div className="grid grid-cols-3 gap-3">
+                    {/* --- FEATURES BUTTONS (BOTTOM) --- */}
+                    <div className="space-y-3 mt-4">
                         {/* 1. DROP */}
                         <div
                             onClick={() => window.Telegram?.WebApp?.showAlert("DROP #24: Oткроется через 43 минуты!")}
-                            className="aspect-square bg-[#1c2636] rounded-2xl border border-white/5 flex flex-col items-center justify-center p-2 cursor-pointer active:scale-95 transition-transform relative overflow-hidden group"
+                            className="bg-gradient-to-r from-[#1c2636] to-[#2a3441] border border-white/10 rounded-2xl p-4 flex items-center gap-4 cursor-pointer relative overflow-hidden group active:scale-[0.98] transition-all"
                         >
                             <div className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full animate-pulse"></div>
-                            <span className="text-3xl mb-1 group-hover:scale-110 transition-transform">⚡️</span>
-                            <span className="text-white font-bold text-xs">Drop</span>
-                            <span className="text-white/40 text-[10px] uppercase font-bold text-center leading-none mt-1">Limited</span>
+                            <div className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center text-xl relative z-10">
+                                ⚡️
+                            </div>
+                            <div className="flex-1 relative z-10">
+                                <h4 className="text-white font-bold text-sm">Limited Drop</h4>
+                                <p className="text-white/40 text-xs">Эксклюзивные товары. Успей забрать</p>
+                            </div>
+                            <span className="material-symbols-outlined text-white/20">chevron_right</span>
                         </div>
 
                         {/* 2. SWIPE */}
                         <div
                             onClick={() => setIsSwipeModeOpen(true)}
-                            className="aspect-square bg-gradient-to-br from-orange-500/10 to-red-500/10 rounded-2xl border border-orange-500/20 flex flex-col items-center justify-center p-2 cursor-pointer active:scale-95 transition-transform relative overflow-hidden group"
+                            className="bg-gradient-to-r from-orange-500/10 to-red-500/10 border border-orange-500/20 rounded-2xl p-4 flex items-center gap-4 cursor-pointer relative overflow-hidden group active:scale-[0.98] transition-all"
                         >
-                            <div className="absolute inset-0 bg-gradient-to-br from-orange-500/10 to-red-500/10 opacity-0 group-hover:opacity-100 transition-opacity"></div>
-                            <span className="text-3xl mb-1 group-hover:scale-110 transition-transform">🔥</span>
-                            <span className="text-white font-bold text-xs">Swipe</span>
-                            <span className="text-orange-500/60 text-[10px] uppercase font-bold text-center leading-none mt-1">Battle</span>
+                            <div className="absolute inset-0 bg-gradient-to-r from-orange-600/20 to-red-600/20 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                            <div className="w-10 h-10 rounded-full bg-orange-500/20 flex items-center justify-center text-xl relative z-10">
+                                🔥
+                            </div>
+                            <div className="flex-1 relative z-10">
+                                <h4 className="text-white font-bold text-sm">Битва луков</h4>
+                                <p className="text-white/40 text-xs">Свайпай и выбирай лучшее</p>
+                            </div>
+                            <span className="material-symbols-outlined text-white/20">chevron_right</span>
                         </div>
 
                         {/* 3. WHEEL */}
                         <div
                             onClick={() => setIsSpinModalOpen(true)}
-                            className="aspect-square bg-gradient-to-br from-purple-500/10 to-indigo-500/10 rounded-2xl border border-purple-500/20 flex flex-col items-center justify-center p-2 cursor-pointer active:scale-95 transition-transform relative overflow-hidden group"
+                            className="bg-gradient-to-r from-purple-500/10 to-indigo-500/10 border border-purple-500/20 rounded-2xl p-4 flex items-center gap-4 cursor-pointer relative overflow-hidden group active:scale-[0.98] transition-all"
                         >
-                            <div className="absolute inset-0 bg-gradient-to-br from-purple-500/10 to-indigo-500/10 opacity-0 group-hover:opacity-100 transition-opacity"></div>
-                            <span className="text-3xl mb-1 group-hover:animate-spin-slow">☸️</span>
-                            <span className="text-white font-bold text-xs">Spin</span>
-                            <span className="text-purple-500/60 text-[10px] uppercase font-bold text-center leading-none mt-1">Daily</span>
+                            <div className="absolute inset-0 bg-gradient-to-r from-purple-600/20 to-indigo-600/20 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                            <div className="w-10 h-10 rounded-full bg-purple-500/20 flex items-center justify-center text-xl relative z-10">
+                                ☸️
+                            </div>
+                            <div className="flex-1 relative z-10">
+                                <h4 className="text-white font-bold text-sm">Daily Spin</h4>
+                                <p className="text-white/40 text-xs">Испытай удачу и выиграй призы</p>
+                            </div>
+                            <span className="material-symbols-outlined text-white/20">chevron_right</span>
                         </div>
                     </div>
 
@@ -204,6 +220,13 @@ export default function Home() {
                     <FullScreenVideo
                         src={LINKS.TUTORIAL_VIDEO}
                         onClose={() => setIsTutorialOpen(false)}
+                    />
+                )}
+
+                {/* Swipe Mode */}
+                {isSwipeModeOpen && (
+                    <SwipeMode
+                        onClose={() => setIsSwipeModeOpen(false)}
                     />
                 )}
             </div>

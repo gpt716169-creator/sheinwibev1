@@ -27,7 +27,7 @@ export default function ResaleItemModal({ item, onClose }) {
             style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0 }}
         >
             {/* Scrollable Container */}
-            <div className="flex-1 flex flex-col pb-32">
+            <div className="flex-1 flex flex-col">
                 {/* Header Image Area */}
                 <div className="relative h-[60vh] shrink-0">
                     <div className="absolute inset-0 bg-cover bg-center" style={{ backgroundImage: `url('${item.image_url}')` }}></div>
@@ -43,7 +43,7 @@ export default function ResaleItemModal({ item, onClose }) {
                 </div>
 
                 {/* Content */}
-                <div className="flex-1 -mt-10 relative z-10 px-6 flex flex-col">
+                <div className="flex-1 -mt-10 relative z-10 px-6 flex flex-col bg-[#101622] rounded-t-3xl border-t border-white/5">
                     {/* Title & Price */}
                     <div className="flex justify-between items-start mb-6">
                         <h1 className="text-2xl font-black text-white flex-1 mr-4 leading-tight">{item.title}</h1>
@@ -83,59 +83,60 @@ export default function ResaleItemModal({ item, onClose }) {
                         </div>
                     </div>
 
-                    {/* Extra Space for scrolling past buttons */}
-                    <div className="h-24"></div>
-                </div>
-            </div>
+                    {/* Buttons Section (Bottom of Page) */}
+                    <div className="py-8 mt-auto z-50 relative">
+                        {item.is_auction ? (
+                            <div className="space-y-4">
+                                {/* Auction Timer Block */}
+                                <div className="bg-[#1c2636] p-4 rounded-xl border border-white/5 flex justify-between items-center shadow-lg">
+                                    <div>
+                                        <p className="text-[10px] text-white/40 uppercase font-bold">До конца</p>
+                                        <p className="text-white font-mono font-bold text-xl animate-pulse">02:59:12</p>
+                                    </div>
+                                    <div className="text-right">
+                                        <span className="bg-orange-500/20 text-orange-500 px-3 py-1 rounded-lg text-xs font-bold">38 ставок</span>
+                                    </div>
+                                </div>
 
-            {/* Sticky Action Button */}
-            <div className="fixed bottom-0 left-0 right-0 p-4 pb-safe-bottom bg-gradient-to-t from-[#101622] via-[#101622] to-transparent z-50">
-                {item.is_auction ? (
-                    <div className="space-y-3">
-                        {/* Auction Timer Floating */}
-                        <div className="absolute bottom-24 left-4 right-4 bg-[#1c2636]/90 backdrop-blur-md p-3 rounded-xl border border-white/10 flex justify-between items-center shadow-xl">
-                            <div>
-                                <p className="text-[10px] text-white/40 uppercase font-bold">До конца</p>
-                                <p className="text-white font-mono font-bold text-lg animate-pulse">02:59:12</p>
+                                <button
+                                    onClick={() => {
+                                        window.Telegram?.WebApp?.showConfirm(`Сделать ставку ${item.price * 1.1} ₽? (Это только тест)`, (ok) => {
+                                            if (ok) window.Telegram?.WebApp?.showAlert('Ставка принята! (Визуально)');
+                                        });
+                                    }}
+                                    className="w-full h-14 bg-orange-500 text-black font-black rounded-xl text-lg uppercase shadow-[0_0_20px_rgba(249,115,22,0.4)] active:scale-95 transition-transform flex items-center justify-center gap-2"
+                                >
+                                    <span className="material-symbols-outlined">gavel</span>
+                                    Сделать ставку
+                                </button>
+                                <p className="text-center text-white/30 text-xs">Минимальный шаг: 10%</p>
                             </div>
-                            <div className="text-right">
-                                <span className="bg-orange-500/20 text-orange-500 px-2 py-1 rounded text-xs font-bold">38 ставок</span>
-                            </div>
-                        </div>
+                        ) : item.currency === 'WIBE' ? (
+                            <button
+                                onClick={() => {
+                                    window.Telegram?.WebApp?.showConfirm(`Купить этот товар за ${item.price} баллов Wibe?`, (ok) => {
+                                        if (ok) window.Telegram?.WebApp?.showAlert('Запрос отправлен продавцу!');
+                                    });
+                                }}
+                                className="w-full h-14 bg-purple-600 text-white font-black rounded-xl text-lg uppercase shadow-[0_0_20px_rgba(147,51,234,0.4)] active:scale-95 transition-transform flex items-center justify-center gap-2"
+                            >
+                                <span className="material-symbols-outlined">loyalty</span>
+                                Купить за {item.price} Wibe
+                            </button>
+                        ) : (
+                            <button
+                                onClick={handleContactSeller}
+                                className="w-full h-14 bg-white text-[#102216] font-black rounded-xl text-lg uppercase shadow-[0_0_20px_rgba(255,255,255,0.2)] active:scale-95 transition-transform flex items-center justify-center gap-2"
+                            >
+                                <span className="material-symbols-outlined">chat</span>
+                                Написать продавцу
+                            </button>
+                        )}
 
-                        <button
-                            onClick={() => {
-                                window.Telegram?.WebApp?.showConfirm(`Сделать ставку ${item.price * 1.1} ₽? (Это только тест)`, (ok) => {
-                                    if (ok) window.Telegram?.WebApp?.showAlert('Ставка принята! (Визуально)');
-                                });
-                            }}
-                            className="w-full h-14 bg-orange-500 text-black font-black rounded-xl text-lg uppercase shadow-[0_0_20px_rgba(249,115,22,0.4)] active:scale-95 transition-transform flex items-center justify-center gap-2"
-                        >
-                            <span className="material-symbols-outlined">gavel</span>
-                            Сделать ставку
-                        </button>
+                        {/* Safe area padding */}
+                        <div className="h-6"></div>
                     </div>
-                ) : item.currency === 'WIBE' ? (
-                    <button
-                        onClick={() => {
-                            window.Telegram?.WebApp?.showConfirm(`Купить этот товар за ${item.price} баллов Wibe?`, (ok) => {
-                                if (ok) window.Telegram?.WebApp?.showAlert('Запрос отправлен продавцу!');
-                            });
-                        }}
-                        className="w-full h-14 bg-purple-600 text-white font-black rounded-xl text-lg uppercase shadow-[0_0_20px_rgba(147,51,234,0.4)] active:scale-95 transition-transform flex items-center justify-center gap-2"
-                    >
-                        <span className="material-symbols-outlined">loyalty</span>
-                        Купить за {item.price} Wibe
-                    </button>
-                ) : (
-                    <button
-                        onClick={handleContactSeller}
-                        className="w-full h-14 bg-white text-[#102216] font-black rounded-xl text-lg uppercase shadow-[0_0_20px_rgba(255,255,255,0.2)] active:scale-95 transition-transform flex items-center justify-center gap-2"
-                    >
-                        <span className="material-symbols-outlined">chat</span>
-                        Написать продавцу
-                    </button>
-                )}
+                </div>
             </div>
         </div>,
         document.body
