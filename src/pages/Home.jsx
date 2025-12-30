@@ -12,6 +12,7 @@ import { useOrders } from '../hooks/useOrders';
 import { useSearch } from '../hooks/useSearch';
 
 import DailySpinModal from '../components/home/DailySpinModal';
+import SwipeMode from '../components/home/SwipeMode';
 
 export default function Home() {
     const { tgUser: user, dbUser, refreshUser } = useAppContext(); // Добавил refreshUser если нужно обновить баллы
@@ -19,7 +20,8 @@ export default function Home() {
     const { activeOrders } = useOrders(user?.id);
     const { handleSearch } = useSearch(user?.id);
     const [isLoyaltyModalOpen, setIsLoyaltyModalOpen] = useState(false);
-    const [isSpinModalOpen, setIsSpinModalOpen] = useState(false); // New State
+    const [isSpinModalOpen, setIsSpinModalOpen] = useState(false);
+    const [isSwipeModeOpen, setIsSwipeModeOpen] = useState(false); // New State
 
     // Состояние для видео-инструкции
     const [isTutorialOpen, setIsTutorialOpen] = useState(false);
@@ -89,101 +91,144 @@ export default function Home() {
 
                     {/* Блик */}
                     <div className="absolute -inset-[100%] top-0 block w-1/2 -skew-x-12 bg-gradient-to-r from-transparent to-white opacity-20 group-hover:animate-shine" />
+                    {/* SWIPE MODE BANNER (NEW) */}
+                    <div
+                        onClick={() => setIsSwipeModeOpen(true)}
+                        className="min-w-[140px] h-20 rounded-xl bg-gradient-to-r from-orange-500 to-red-500 p-3 flex flex-col justify-between relative overflow-hidden group border border-white/10 cursor-pointer"
+                    >
+                        <div className="absolute -bottom-2 -right-2 text-4xl animate-bounce">🔥</div>
+                        <span className="bg-white/20 self-start px-2 py-0.5 rounded text-[10px] font-bold text-white backdrop-blur-sm">Tinder Mode</span>
+                        <p className="text-white font-bold text-xs leading-tight z-10">Битва луков<br />Свайпай!</p>
+                    </div>
+
                 </div>
 
-                {/* 2. КАРТА ЛОЯЛЬНОСТИ */}
-                <div className="relative z-10">
-                    <h3 className="text-white font-bold text-sm uppercase tracking-wider mb-3 ml-1 opacity-50">Мой уровень</h3>
-                    <LoyaltyCard
-                        points={parseInt(dbUser?.points) || 0}
-                        totalSpent={parseInt(dbUser?.total_spent) || 0}
-                        onOpenDetails={() => setIsLoyaltyModalOpen(true)}
+                {/* DROPS SECTION (NEW) */}
+                <div className="px-6 mt-6 mb-2">
+                    <div className="w-full bg-[#1c2636] rounded-2xl border border-white/5 overflow-hidden relative">
+                        {/* Timer Badge */}
+                        <div className="absolute top-3 left-3 bg-red-600 text-white text-[10px] font-bold px-2 py-1 rounded flex items-center gap-1 z-10 animate-pulse">
+                            <span className="material-symbols-outlined text-xs">timer</span>
+                            00:43:12
+                        </div>
+
+                        <div className="h-32 bg-cover bg-center" style={{ backgroundImage: "url('https://img.ltwebstatic.com/images3_pi/2023/11/08/90/1699413690fc101901a557b77ce225b27341fe2276_thumbnail_600x.webp')" }}>
+                            <div className="absolute inset-0 bg-gradient-to-r from-black/80 to-transparent"></div>
+                        </div>
+
+                        <div className="absolute top-0 bottom-0 left-0 p-4 flex flex-col justify-center max-w-[60%]">
+                            <h3 className="text-white font-black text-xl italic uppercase tracking-wider relative">
+                                DROP #24
+                                <span className="absolute -top-2 -right-3 text-xs text-yellow-400 rotate-12">Limited</span>
+                            </h3>
+                            <p className="text-white/60 text-xs mt-1 mb-3">Коллекция Y2K. Всего 50 единиц. Успей забрать.</p>
+                            <button
+                                onClick={() => window.Telegram?.WebApp?.showAlert("Дроп откроется через 43 минуты!")}
+                                className="bg-white text-black font-bold text-xs px-4 py-2 rounded-lg self-start uppercase hover:scale-105 transition-transform"
+                            >
+                                Смотреть
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div className="px-6 space-y-8 relative z-0 mt-6">
+
+
+
+                    {/* 2. КАРТА ЛОЯЛЬНОСТИ */}
+                    <div className="relative z-10">
+                        <h3 className="text-white font-bold text-sm uppercase tracking-wider mb-3 ml-1 opacity-50">Мой уровень</h3>
+                        <LoyaltyCard
+                            points={parseInt(dbUser?.points) || 0}
+                            totalSpent={parseInt(dbUser?.total_spent) || 0}
+                            onOpenDetails={() => setIsLoyaltyModalOpen(true)}
+                        />
+                    </div>
+
+                    {/* 3. АКТИВНЫЕ ЗАКАЗЫ */}
+                    <ActiveOrders
+                        orders={activeOrders}
+                        onGoToOrders={() => navigate(ROUTES.PROFILE)}
                     />
+
+                    {/* 4. БЛОК ССЫЛОК */}
+                    <div className="space-y-3">
+                        {/* Отзывы */}
+                        <ReviewsBanner />
+
+                        {/* Видео */}
+                        <div
+                            onClick={() => setIsTutorialOpen(true)}
+                            className="bg-white/5 border border-white/5 rounded-2xl p-4 flex items-center gap-4 cursor-pointer hover:bg-white/10 transition-colors active:scale-[0.98]"
+                        >
+                            <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center text-primary relative shrink-0">
+                                <span className="material-symbols-outlined">play_arrow</span>
+                                <div className="absolute inset-0 rounded-full bg-primary/20 animate-ping opacity-75"></div>
+                            </div>
+                            <div className="flex-1">
+                                <h4 className="text-white font-bold text-sm">Как это работает?</h4>
+                                <p className="text-white/40 text-xs">Видео-инструкция (45 сек)</p>
+                            </div>
+                            <span className="material-symbols-outlined text-white/20">chevron_right</span>
+                        </div>
+
+                        {/* --- КНОПКА: SHEIN APP --- */}
+                        <div
+                            onClick={openShein}
+                            className="bg-black/60 border border-white/10 rounded-2xl p-4 flex items-center gap-4 cursor-pointer hover:bg-black/80 transition-colors active:scale-[0.98]"
+                        >
+                            <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center text-black font-extrabold text-lg shrink-0">
+                                S
+                            </div>
+                            <div className="flex-1">
+                                <h4 className="text-white font-bold text-sm">Перейти в SHEIN</h4>
+                                <p className="text-white/40 text-xs">Выбрать товары в приложении</p>
+                            </div>
+                            <span className="material-symbols-outlined text-white/20">open_in_new</span>
+                        </div>
+
+                        {/* VPN */}
+                        <div
+                            onClick={openVpn}
+                            className="bg-[#1e2a4a]/40 border border-blue-500/20 rounded-2xl p-4 flex items-center gap-4 cursor-pointer hover:bg-[#1e2a4a]/60 transition-colors active:scale-[0.98]"
+                        >
+                            <div className="w-10 h-10 rounded-full bg-blue-500/20 flex items-center justify-center text-blue-400 shrink-0">
+                                <span className="material-symbols-outlined">vpn_lock</span>
+                            </div>
+                            <div className="flex-1">
+                                <h4 className="text-white font-bold text-sm">Не грузит SHEIN?</h4>
+                                <p className="text-white/40 text-xs">Включи быстрый VPN для доступа</p>
+                            </div>
+                            <span className="material-symbols-outlined text-white/20">open_in_new</span>
+                        </div>
+                    </div>
+
                 </div>
 
-                {/* 3. АКТИВНЫЕ ЗАКАЗЫ */}
-                <ActiveOrders
-                    orders={activeOrders}
-                    onGoToOrders={() => navigate(ROUTES.PROFILE)}
-                />
+                {/* --- МОДАЛКИ --- */}
+                {isLoyaltyModalOpen && (
+                    <LoyaltyModal
+                        totalSpent={dbUser?.total_spent || 0}
+                        onClose={() => setIsLoyaltyModalOpen(false)}
+                    />
+                )}
 
-                {/* 4. БЛОК ССЫЛОК */}
-                <div className="space-y-3">
+                {/* Daily Spin */}
+                {isSpinModalOpen && (
+                    <DailySpinModal
+                        onClose={() => setIsSpinModalOpen(false)}
+                        onWin={handleSpinWin}
+                    />
+                )}
 
-                    {/* Отзывы */}
-                    <ReviewsBanner />
-
-                    {/* Видео */}
-                    <div
-                        onClick={() => setIsTutorialOpen(true)}
-                        className="bg-white/5 border border-white/5 rounded-2xl p-4 flex items-center gap-4 cursor-pointer hover:bg-white/10 transition-colors active:scale-[0.98]"
-                    >
-                        <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center text-primary relative shrink-0">
-                            <span className="material-symbols-outlined">play_arrow</span>
-                            <div className="absolute inset-0 rounded-full bg-primary/20 animate-ping opacity-75"></div>
-                        </div>
-                        <div className="flex-1">
-                            <h4 className="text-white font-bold text-sm">Как это работает?</h4>
-                            <p className="text-white/40 text-xs">Видео-инструкция (45 сек)</p>
-                        </div>
-                        <span className="material-symbols-outlined text-white/20">chevron_right</span>
-                    </div>
-
-                    {/* --- КНОПКА: SHEIN APP --- */}
-                    <div
-                        onClick={openShein}
-                        className="bg-black/60 border border-white/10 rounded-2xl p-4 flex items-center gap-4 cursor-pointer hover:bg-black/80 transition-colors active:scale-[0.98]"
-                    >
-                        <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center text-black font-extrabold text-lg shrink-0">
-                            S
-                        </div>
-                        <div className="flex-1">
-                            <h4 className="text-white font-bold text-sm">Перейти в SHEIN</h4>
-                            <p className="text-white/40 text-xs">Выбрать товары в приложении</p>
-                        </div>
-                        <span className="material-symbols-outlined text-white/20">open_in_new</span>
-                    </div>
-
-                    {/* VPN */}
-                    <div
-                        onClick={openVpn}
-                        className="bg-[#1e2a4a]/40 border border-blue-500/20 rounded-2xl p-4 flex items-center gap-4 cursor-pointer hover:bg-[#1e2a4a]/60 transition-colors active:scale-[0.98]"
-                    >
-                        <div className="w-10 h-10 rounded-full bg-blue-500/20 flex items-center justify-center text-blue-400 shrink-0">
-                            <span className="material-symbols-outlined">vpn_lock</span>
-                        </div>
-                        <div className="flex-1">
-                            <h4 className="text-white font-bold text-sm">Не грузит SHEIN?</h4>
-                            <p className="text-white/40 text-xs">Включи быстрый VPN для доступа</p>
-                        </div>
-                        <span className="material-symbols-outlined text-white/20">open_in_new</span>
-                    </div>
-                </div>
-
+                {isTutorialOpen && (
+                    <FullScreenVideo
+                        src={LINKS.TUTORIAL_VIDEO}
+                        onClose={() => setIsTutorialOpen(false)}
+                    />
+                )}
             </div>
-
-            {/* --- МОДАЛКИ --- */}
-            {isLoyaltyModalOpen && (
-                <LoyaltyModal
-                    totalSpent={dbUser?.total_spent || 0}
-                    onClose={() => setIsLoyaltyModalOpen(false)}
-                />
-            )}
-
-            {/* Daily Spin */}
-            {isSpinModalOpen && (
-                <DailySpinModal
-                    onClose={() => setIsSpinModalOpen(false)}
-                    onWin={handleSpinWin}
-                />
-            )}
-
-            {isTutorialOpen && (
-                <FullScreenVideo
-                    src={LINKS.TUTORIAL_VIDEO}
-                    onClose={() => setIsTutorialOpen(false)}
-                />
-            )}
         </div>
     );
 }

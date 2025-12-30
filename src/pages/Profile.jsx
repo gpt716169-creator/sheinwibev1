@@ -3,6 +3,7 @@ import ProfileHeader from '../components/profile/ProfileHeader';
 import OrdersTab from '../components/profile/OrdersTab';
 import AddressesTab from '../components/profile/AddressesTab';
 import ReferralTab from '../components/profile/ReferralTab';
+import AchievementsTab from '../components/profile/AchievementsTab';
 import OrderDetailsModal from '../components/profile/OrderDetailsModal';
 import AddressModal from '../components/profile/AddressModal';
 import { useAppContext } from '../context/AppContext';
@@ -128,6 +129,7 @@ export default function Profile() {
                     <button onClick={() => setActiveTab('orders')} className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all ${activeTab === 'orders' ? 'bg-white/10 text-white shadow-sm' : 'text-white/40'}`}>Заказы</button>
                     <button onClick={() => setActiveTab('addresses')} className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all ${activeTab === 'addresses' ? 'bg-white/10 text-white shadow-sm' : 'text-white/40'}`}>Адреса</button>
                     <button onClick={() => setActiveTab('referral')} className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all ${activeTab === 'referral' ? 'bg-white/10 text-white shadow-sm' : 'text-white/40'}`}>Друзья</button>
+                    <button onClick={() => setActiveTab('achievements')} className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all ${activeTab === 'achievements' ? 'bg-gradient-to-br from-yellow-500/20 to-orange-500/20 text-yellow-400 shadow-sm border border-yellow-500/20' : 'text-white/40'}`}>Награды</button>
                 </div>
             </div>
 
@@ -149,6 +151,10 @@ export default function Profile() {
 
                 {activeTab === 'referral' && (
                     <ReferralTab userId={user?.id} />
+                )}
+
+                {activeTab === 'achievements' && (
+                    <AchievementsTab />
                 )}
             </div>
 
