@@ -68,7 +68,7 @@ export default function ResaleItemModal({ item, onClose }) {
                     <div className="w-full h-px bg-white/5 mb-8"></div>
 
                     {/* Description */}
-                    <div className="space-y-8 mb-8">
+                    <div className="space-y-8 mb-8 pb-32">
                         <div>
                             <h3 className="text-white/40 text-xs uppercase font-bold mb-3 tracking-wider">Описание</h3>
                             <p className="text-white/90 text-base leading-relaxed font-secondary">{item.description}</p>

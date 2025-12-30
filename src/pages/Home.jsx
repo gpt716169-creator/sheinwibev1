@@ -70,67 +70,9 @@ export default function Home() {
                 <LinkSearch onSearch={handleSearch} />
 
                 {/* 1.5 КОЛЕСО ФОРТУНЫ (Баннер) */}
-                <div
-                    onClick={() => setIsSpinModalOpen(true)}
-                    className="relative w-full h-24 rounded-2xl overflow-hidden cursor-pointer active:scale-[0.98] transition-all shadow-[0_0_20px_rgba(255,215,0,0.15)] border border-[#FFD700]/30 group"
-                >
-                    {/* Фон */}
-                    <div className="absolute inset-0 bg-gradient-to-r from-[#1c2636] to-[#2a3441]"></div>
-                    <div className="absolute inset-0 bg-[url('https://img.freepik.com/free-vector/casino-background-with-golden-coins_1017-38379.jpg')] bg-cover bg-center opacity-20 mix-blend-overlay"></div>
+                {/* 1.5 КОЛЕСО ФОРТУНЫ - Удалено из топа */}
 
-                    {/* Контент */}
-                    <div className="absolute inset-0 flex items-center justify-between px-6">
-                        <div className="z-10">
-                            <h3 className="text-[#FFD700] font-black text-xl uppercase italic drop-shadow-md">Daily Spin</h3>
-                            <p className="text-white/60 text-xs max-w-[150px] leading-tight mt-1">Крути колесо и получай подарки каждые 24 часа!</p>
-                        </div>
-                        <div className="z-10 w-12 h-12 bg-[#FFD700] rounded-full flex items-center justify-center shadow-lg animate-bounce-slow text-black font-bold text-xl">
-                            🎰
-                        </div>
-                    </div>
-
-                    {/* Блик */}
-                    <div className="absolute -inset-[100%] top-0 block w-1/2 -skew-x-12 bg-gradient-to-r from-transparent to-white opacity-20 group-hover:animate-shine" />
-                    {/* SWIPE MODE BANNER (NEW) */}
-                    <div
-                        onClick={() => setIsSwipeModeOpen(true)}
-                        className="min-w-[140px] h-20 rounded-xl bg-gradient-to-r from-orange-500 to-red-500 p-3 flex flex-col justify-between relative overflow-hidden group border border-white/10 cursor-pointer"
-                    >
-                        <div className="absolute -bottom-2 -right-2 text-4xl animate-bounce">🔥</div>
-                        <span className="bg-white/20 self-start px-2 py-0.5 rounded text-[10px] font-bold text-white backdrop-blur-sm">Tinder Mode</span>
-                        <p className="text-white font-bold text-xs leading-tight z-10">Битва луков<br />Свайпай!</p>
-                    </div>
-
-                </div>
-
-                {/* DROPS SECTION (NEW) */}
-                <div className="px-6 mt-6 mb-2">
-                    <div className="w-full bg-[#1c2636] rounded-2xl border border-white/5 overflow-hidden relative">
-                        {/* Timer Badge */}
-                        <div className="absolute top-3 left-3 bg-red-600 text-white text-[10px] font-bold px-2 py-1 rounded flex items-center gap-1 z-10 animate-pulse">
-                            <span className="material-symbols-outlined text-xs">timer</span>
-                            00:43:12
-                        </div>
-
-                        <div className="h-32 bg-cover bg-center" style={{ backgroundImage: "url('https://img.ltwebstatic.com/images3_pi/2023/11/08/90/1699413690fc101901a557b77ce225b27341fe2276_thumbnail_600x.webp')" }}>
-                            <div className="absolute inset-0 bg-gradient-to-r from-black/80 to-transparent"></div>
-                        </div>
-
-                        <div className="absolute top-0 bottom-0 left-0 p-4 flex flex-col justify-center max-w-[60%]">
-                            <h3 className="text-white font-black text-xl italic uppercase tracking-wider relative">
-                                DROP #24
-                                <span className="absolute -top-2 -right-3 text-xs text-yellow-400 rotate-12">Limited</span>
-                            </h3>
-                            <p className="text-white/60 text-xs mt-1 mb-3">Коллекция Y2K. Всего 50 единиц. Успей забрать.</p>
-                            <button
-                                onClick={() => window.Telegram?.WebApp?.showAlert("Дроп откроется через 43 минуты!")}
-                                className="bg-white text-black font-bold text-xs px-4 py-2 rounded-lg self-start uppercase hover:scale-105 transition-transform"
-                            >
-                                Смотреть
-                            </button>
-                        </div>
-                    </div>
-                </div>
+                {/* DROPS SECTION - Удалено из топа */}
 
                 <div className="px-6 space-y-8 relative z-0 mt-6">
 
@@ -201,6 +143,42 @@ export default function Home() {
                                 <p className="text-white/40 text-xs">Включи быстрый VPN для доступа</p>
                             </div>
                             <span className="material-symbols-outlined text-white/20">open_in_new</span>
+                        </div>
+                    </div>
+
+                    {/* --- FEATURES BUTTONS (BOTTOM) --- */}
+                    <div className="grid grid-cols-3 gap-3">
+                        {/* 1. DROP */}
+                        <div
+                            onClick={() => window.Telegram?.WebApp?.showAlert("DROP #24: Oткроется через 43 минуты!")}
+                            className="aspect-square bg-[#1c2636] rounded-2xl border border-white/5 flex flex-col items-center justify-center p-2 cursor-pointer active:scale-95 transition-transform relative overflow-hidden group"
+                        >
+                            <div className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full animate-pulse"></div>
+                            <span className="text-3xl mb-1 group-hover:scale-110 transition-transform">⚡️</span>
+                            <span className="text-white font-bold text-xs">Drop</span>
+                            <span className="text-white/40 text-[10px] uppercase font-bold text-center leading-none mt-1">Limited</span>
+                        </div>
+
+                        {/* 2. SWIPE */}
+                        <div
+                            onClick={() => setIsSwipeModeOpen(true)}
+                            className="aspect-square bg-gradient-to-br from-orange-500/10 to-red-500/10 rounded-2xl border border-orange-500/20 flex flex-col items-center justify-center p-2 cursor-pointer active:scale-95 transition-transform relative overflow-hidden group"
+                        >
+                            <div className="absolute inset-0 bg-gradient-to-br from-orange-500/10 to-red-500/10 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                            <span className="text-3xl mb-1 group-hover:scale-110 transition-transform">🔥</span>
+                            <span className="text-white font-bold text-xs">Swipe</span>
+                            <span className="text-orange-500/60 text-[10px] uppercase font-bold text-center leading-none mt-1">Battle</span>
+                        </div>
+
+                        {/* 3. WHEEL */}
+                        <div
+                            onClick={() => setIsSpinModalOpen(true)}
+                            className="aspect-square bg-gradient-to-br from-purple-500/10 to-indigo-500/10 rounded-2xl border border-purple-500/20 flex flex-col items-center justify-center p-2 cursor-pointer active:scale-95 transition-transform relative overflow-hidden group"
+                        >
+                            <div className="absolute inset-0 bg-gradient-to-br from-purple-500/10 to-indigo-500/10 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                            <span className="text-3xl mb-1 group-hover:animate-spin-slow">☸️</span>
+                            <span className="text-white font-bold text-xs">Spin</span>
+                            <span className="text-purple-500/60 text-[10px] uppercase font-bold text-center leading-none mt-1">Daily</span>
                         </div>
                     </div>
 
