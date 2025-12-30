@@ -64,140 +64,129 @@ export default function Home() {
                 </div>
             </div>
 
-            <div className="px-6 space-y-8 relative z-0">
+            {/* CONTENT CONTAINER */}
+            <div className="px-4 space-y-6 relative z-0">
 
                 {/* 1. ПОИСК */}
                 <LinkSearch onSearch={handleSearch} />
 
-                {/* 1.5 КОЛЕСО ФОРТУНЫ (Баннер) */}
-                {/* 1.5 КОЛЕСО ФОРТУНЫ - Удалено из топа */}
-
-                {/* DROPS SECTION - Удалено из топа */}
-
-                <div className="px-6 space-y-8 relative z-0 mt-6">
-
-
-
-                    {/* 2. КАРТА ЛОЯЛЬНОСТИ */}
-                    <div className="relative z-10">
-                        <h3 className="text-white font-bold text-sm uppercase tracking-wider mb-3 ml-1 opacity-50">Мой уровень</h3>
-                        <LoyaltyCard
-                            points={parseInt(dbUser?.points) || 0}
-                            totalSpent={parseInt(dbUser?.total_spent) || 0}
-                            onOpenDetails={() => setIsLoyaltyModalOpen(true)}
-                        />
-                    </div>
-
-                    {/* 3. АКТИВНЫЕ ЗАКАЗЫ */}
-                    <ActiveOrders
-                        orders={activeOrders}
-                        onGoToOrders={() => navigate(ROUTES.PROFILE)}
+                {/* 2. КАРТА ЛОЯЛЬНОСТИ */}
+                <div className="relative z-10 pt-4">
+                    <h3 className="text-white font-bold text-sm uppercase tracking-wider mb-3 ml-1 opacity-50">Мой уровень</h3>
+                    <LoyaltyCard
+                        points={parseInt(dbUser?.points) || 0}
+                        totalSpent={parseInt(dbUser?.total_spent) || 0}
+                        onOpenDetails={() => setIsLoyaltyModalOpen(true)}
                     />
+                </div>
 
-                    {/* 4. БЛОК ССЫЛОК */}
-                    <div className="space-y-3">
-                        {/* Отзывы */}
-                        <ReviewsBanner />
+                {/* 3. АКТИВНЫЕ ЗАКАЗЫ */}
+                <ActiveOrders
+                    orders={activeOrders}
+                    onGoToOrders={() => navigate(ROUTES.PROFILE)}
+                />
 
-                        {/* Видео */}
-                        <div
-                            onClick={() => setIsTutorialOpen(true)}
-                            className="bg-white/5 border border-white/5 rounded-2xl p-4 flex items-center gap-4 cursor-pointer hover:bg-white/10 transition-colors active:scale-[0.98]"
-                        >
-                            <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center text-primary relative shrink-0">
-                                <span className="material-symbols-outlined">play_arrow</span>
-                                <div className="absolute inset-0 rounded-full bg-primary/20 animate-ping opacity-75"></div>
-                            </div>
-                            <div className="flex-1">
-                                <h4 className="text-white font-bold text-sm">Как это работает?</h4>
-                                <p className="text-white/40 text-xs">Видео-инструкция (45 сек)</p>
-                            </div>
-                            <span className="material-symbols-outlined text-white/20">chevron_right</span>
+                {/* 4. БЛОК ССЫЛОК */}
+                <div className="space-y-3">
+                    {/* Отзывы */}
+                    <ReviewsBanner />
+
+                    {/* Видео */}
+                    <div
+                        onClick={() => setIsTutorialOpen(true)}
+                        className="bg-white/5 border border-white/5 rounded-2xl p-4 flex items-center gap-4 cursor-pointer hover:bg-white/10 transition-colors active:scale-[0.98]"
+                    >
+                        <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center text-primary relative shrink-0">
+                            <span className="material-symbols-outlined">play_arrow</span>
+                            <div className="absolute inset-0 rounded-full bg-primary/20 animate-ping opacity-75"></div>
                         </div>
-
-                        {/* --- КНОПКА: SHEIN APP --- */}
-                        <div
-                            onClick={openShein}
-                            className="bg-black/60 border border-white/10 rounded-2xl p-4 flex items-center gap-4 cursor-pointer hover:bg-black/80 transition-colors active:scale-[0.98]"
-                        >
-                            <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center text-black font-extrabold text-lg shrink-0">
-                                S
-                            </div>
-                            <div className="flex-1">
-                                <h4 className="text-white font-bold text-sm">Перейти в SHEIN</h4>
-                                <p className="text-white/40 text-xs">Выбрать товары в приложении</p>
-                            </div>
-                            <span className="material-symbols-outlined text-white/20">open_in_new</span>
+                        <div className="flex-1">
+                            <h4 className="text-white font-bold text-sm">Как это работает?</h4>
+                            <p className="text-white/40 text-xs">Видео-инструкция (45 сек)</p>
                         </div>
-
-                        {/* VPN */}
-                        <div
-                            onClick={openVpn}
-                            className="bg-[#1e2a4a]/40 border border-blue-500/20 rounded-2xl p-4 flex items-center gap-4 cursor-pointer hover:bg-[#1e2a4a]/60 transition-colors active:scale-[0.98]"
-                        >
-                            <div className="w-10 h-10 rounded-full bg-blue-500/20 flex items-center justify-center text-blue-400 shrink-0">
-                                <span className="material-symbols-outlined">vpn_lock</span>
-                            </div>
-                            <div className="flex-1">
-                                <h4 className="text-white font-bold text-sm">Не грузит SHEIN?</h4>
-                                <p className="text-white/40 text-xs">Включи быстрый VPN для доступа</p>
-                            </div>
-                            <span className="material-symbols-outlined text-white/20">open_in_new</span>
-                        </div>
+                        <span className="material-symbols-outlined text-white/20">chevron_right</span>
                     </div>
 
-                    {/* --- FEATURES BUTTONS (BOTTOM) --- */}
-                    {/* --- FEATURES BUTTONS (BOTTOM) --- */}
-                    <div className="space-y-3 mt-4">
-                        {/* 1. DROP */}
-                        <div
-                            onClick={() => window.Telegram?.WebApp?.showAlert("DROP #24: Oткроется через 43 минуты!")}
-                            className="bg-gradient-to-r from-[#1c2636] to-[#2a3441] border border-white/10 rounded-2xl p-4 flex items-center gap-4 cursor-pointer relative overflow-hidden group active:scale-[0.98] transition-all"
-                        >
-                            <div className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full animate-pulse"></div>
-                            <div className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center text-xl relative z-10">
-                                ⚡️
-                            </div>
-                            <div className="flex-1 relative z-10">
-                                <h4 className="text-white font-bold text-sm">Limited Drop</h4>
-                                <p className="text-white/40 text-xs">Эксклюзивные товары. Успей забрать</p>
-                            </div>
-                            <span className="material-symbols-outlined text-white/20">chevron_right</span>
+                    {/* --- КНОПКА: SHEIN APP --- */}
+                    <div
+                        onClick={openShein}
+                        className="bg-black/60 border border-white/10 rounded-2xl p-4 flex items-center gap-4 cursor-pointer hover:bg-black/80 transition-colors active:scale-[0.98]"
+                    >
+                        <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center text-black font-extrabold text-lg shrink-0">
+                            S
                         </div>
-
-                        {/* 2. SWIPE */}
-                        <div
-                            onClick={() => setIsSwipeModeOpen(true)}
-                            className="bg-gradient-to-r from-orange-500/10 to-red-500/10 border border-orange-500/20 rounded-2xl p-4 flex items-center gap-4 cursor-pointer relative overflow-hidden group active:scale-[0.98] transition-all"
-                        >
-                            <div className="absolute inset-0 bg-gradient-to-r from-orange-600/20 to-red-600/20 opacity-0 group-hover:opacity-100 transition-opacity"></div>
-                            <div className="w-10 h-10 rounded-full bg-orange-500/20 flex items-center justify-center text-xl relative z-10">
-                                🔥
-                            </div>
-                            <div className="flex-1 relative z-10">
-                                <h4 className="text-white font-bold text-sm">Битва луков</h4>
-                                <p className="text-white/40 text-xs">Свайпай и выбирай лучшее</p>
-                            </div>
-                            <span className="material-symbols-outlined text-white/20">chevron_right</span>
+                        <div className="flex-1">
+                            <h4 className="text-white font-bold text-sm">Перейти в SHEIN</h4>
+                            <p className="text-white/40 text-xs">Выбрать товары в приложении</p>
                         </div>
-
-                        {/* 3. WHEEL */}
-                        <div
-                            onClick={() => setIsSpinModalOpen(true)}
-                            className="bg-gradient-to-r from-purple-500/10 to-indigo-500/10 border border-purple-500/20 rounded-2xl p-4 flex items-center gap-4 cursor-pointer relative overflow-hidden group active:scale-[0.98] transition-all"
-                        >
-                            <div className="absolute inset-0 bg-gradient-to-r from-purple-600/20 to-indigo-600/20 opacity-0 group-hover:opacity-100 transition-opacity"></div>
-                            <div className="w-10 h-10 rounded-full bg-purple-500/20 flex items-center justify-center text-xl relative z-10">
-                                ☸️
-                            </div>
-                            <div className="flex-1 relative z-10">
-                                <h4 className="text-white font-bold text-sm">Daily Spin</h4>
-                                <p className="text-white/40 text-xs">Испытай удачу и выиграй призы</p>
-                            </div>
-                            <span className="material-symbols-outlined text-white/20">chevron_right</span>
-                        </div>
+                        <span className="material-symbols-outlined text-white/20">open_in_new</span>
                     </div>
 
+                    {/* VPN */}
+                    <div
+                        onClick={openVpn}
+                        className="bg-[#1e2a4a]/40 border border-blue-500/20 rounded-2xl p-4 flex items-center gap-4 cursor-pointer hover:bg-[#1e2a4a]/60 transition-colors active:scale-[0.98]"
+                    >
+                        <div className="w-10 h-10 rounded-full bg-blue-500/20 flex items-center justify-center text-blue-400 shrink-0">
+                            <span className="material-symbols-outlined">vpn_lock</span>
+                        </div>
+                        <div className="flex-1">
+                            <h4 className="text-white font-bold text-sm">Не грузит SHEIN?</h4>
+                            <p className="text-white/40 text-xs">Включи быстрый VPN для доступа</p>
+                        </div>
+                        <span className="material-symbols-outlined text-white/20">open_in_new</span>
+                    </div>
+                </div>
+
+                {/* --- FEATURES BUTTONS (BOTTOM) --- */}
+                <div className="space-y-3 mt-4">
+                    {/* 1. DROP */}
+                    <div
+                        onClick={() => window.Telegram?.WebApp?.showAlert("DROP #24: Oткроется через 43 минуты!")}
+                        className="bg-gradient-to-r from-[#1c2636] to-[#2a3441] border border-white/10 rounded-2xl p-4 flex items-center gap-4 cursor-pointer relative overflow-hidden group active:scale-[0.98] transition-all"
+                    >
+                        <div className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full animate-pulse"></div>
+                        <div className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center text-xl relative z-10">
+                            ⚡️
+                        </div>
+                        <div className="flex-1 relative z-10">
+                            <h4 className="text-white font-bold text-sm">Limited Drop</h4>
+                            <p className="text-white/40 text-xs">Эксклюзивные товары. Успей забрать</p>
+                        </div>
+                        <span className="material-symbols-outlined text-white/20">chevron_right</span>
+                    </div>
+
+                    {/* 2. SWIPE */}
+                    <div
+                        onClick={() => setIsSwipeModeOpen(true)}
+                        className="bg-gradient-to-r from-orange-500/10 to-red-500/10 border border-orange-500/20 rounded-2xl p-4 flex items-center gap-4 cursor-pointer relative overflow-hidden group active:scale-[0.98] transition-all"
+                    >
+                        <div className="absolute inset-0 bg-gradient-to-r from-orange-600/20 to-red-600/20 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                        <div className="w-10 h-10 rounded-full bg-orange-500/20 flex items-center justify-center text-xl relative z-10">
+                            🔥
+                        </div>
+                        <div className="flex-1 relative z-10">
+                            <h4 className="text-white font-bold text-sm">Битва луков</h4>
+                            <p className="text-white/40 text-xs">Свайпай и выбирай лучшее</p>
+                        </div>
+                        <span className="material-symbols-outlined text-white/20">chevron_right</span>
+                    </div>
+
+                    {/* 3. WHEEL */}
+                    <div
+                        onClick={() => setIsSpinModalOpen(true)}
+                        className="bg-gradient-to-r from-purple-500/10 to-indigo-500/10 border border-purple-500/20 rounded-2xl p-4 flex items-center gap-4 cursor-pointer relative overflow-hidden group active:scale-[0.98] transition-all"
+                    >
+                        <div className="absolute inset-0 bg-gradient-to-r from-purple-600/20 to-indigo-600/20 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                        <div className="w-10 h-10 rounded-full bg-purple-500/20 flex items-center justify-center text-xl relative z-10">
+                            ☸️
+                        </div>
+                        <div className="flex-1 relative z-10">
+                            <h4 className="text-white font-bold text-sm">Daily Spin</h4>
+                            <p className="text-white/40 text-xs">Испытай удачу и выиграй призы</p>
+                        </div>
+                        <span className="material-symbols-outlined text-white/20">chevron_right</span>
+                    </div>
                 </div>
 
                 {/* --- МОДАЛКИ --- */}
