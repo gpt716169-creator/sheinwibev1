@@ -11,12 +11,15 @@ import { useAppContext } from '../context/AppContext';
 import { useOrders } from '../hooks/useOrders';
 import { useSearch } from '../hooks/useSearch';
 
+import DailySpinModal from '../components/home/DailySpinModal';
+
 export default function Home() {
-    const { tgUser: user, dbUser } = useAppContext();
+    const { tgUser: user, dbUser, refreshUser } = useAppContext(); // Добавил refreshUser если нужно обновить баллы
     const navigate = useNavigate();
     const { activeOrders } = useOrders(user?.id);
     const { handleSearch } = useSearch(user?.id);
     const [isLoyaltyModalOpen, setIsLoyaltyModalOpen] = useState(false);
+    const [isSpinModalOpen, setIsSpinModalOpen] = useState(false); // New State
 
     // Состояние для видео-инструкции
     const [isTutorialOpen, setIsTutorialOpen] = useState(false);
@@ -26,14 +29,22 @@ export default function Home() {
     };
 
     const openShein = () => {
-        // openLink с флагом try_instant_view: false - это лучший способ заставить 
-        // Телеграм отдать ссылку системе, чтобы та открыла приложение
         if (window.Telegram?.WebApp?.openLink) {
             window.Telegram.WebApp.openLink(LINKS.SHEIN_APP_JUMP, { try_instant_view: false });
         } else {
-            // Если открыли не в телеге
             window.open(LINKS.SHEIN_APP_JUMP, '_blank');
         }
+    };
+
+    const handleSpinWin = async (prize) => {
+        // Здесь можно отправить запрос на бэкэнд
+        console.log("Won prize:", prize);
+
+        // Показываем конфетти или алерт
+        // window.Telegram?.WebApp?.showAlert(`Поздравляем! Вы выиграли: ${prize.label}`);
+
+        // Мок: если баллы, обновляем локально (в идеале - запрос в базу)
+        // if (prize.value.includes('points')) { ... }
     };
 
     // --- RENDER ---
@@ -55,6 +66,30 @@ export default function Home() {
 
                 {/* 1. ПОИСК */}
                 <LinkSearch onSearch={handleSearch} />
+
+                {/* 1.5 КОЛЕСО ФОРТУНЫ (Баннер) */}
+                <div
+                    onClick={() => setIsSpinModalOpen(true)}
+                    className="relative w-full h-24 rounded-2xl overflow-hidden cursor-pointer active:scale-[0.98] transition-all shadow-[0_0_20px_rgba(255,215,0,0.15)] border border-[#FFD700]/30 group"
+                >
+                    {/* Фон */}
+                    <div className="absolute inset-0 bg-gradient-to-r from-[#1c2636] to-[#2a3441]"></div>
+                    <div className="absolute inset-0 bg-[url('https://img.freepik.com/free-vector/casino-background-with-golden-coins_1017-38379.jpg')] bg-cover bg-center opacity-20 mix-blend-overlay"></div>
+
+                    {/* Контент */}
+                    <div className="absolute inset-0 flex items-center justify-between px-6">
+                        <div className="z-10">
+                            <h3 className="text-[#FFD700] font-black text-xl uppercase italic drop-shadow-md">Daily Spin</h3>
+                            <p className="text-white/60 text-xs max-w-[150px] leading-tight mt-1">Крути колесо и получай подарки каждые 24 часа!</p>
+                        </div>
+                        <div className="z-10 w-12 h-12 bg-[#FFD700] rounded-full flex items-center justify-center shadow-lg animate-bounce-slow text-black font-bold text-xl">
+                            🎰
+                        </div>
+                    </div>
+
+                    {/* Блик */}
+                    <div className="absolute -inset-[100%] top-0 block w-1/2 -skew-x-12 bg-gradient-to-r from-transparent to-white opacity-20 group-hover:animate-shine" />
+                </div>
 
                 {/* 2. КАРТА ЛОЯЛЬНОСТИ */}
                 <div className="relative z-10">
@@ -132,6 +167,14 @@ export default function Home() {
                 <LoyaltyModal
                     totalSpent={dbUser?.total_spent || 0}
                     onClose={() => setIsLoyaltyModalOpen(false)}
+                />
+            )}
+
+            {/* Daily Spin */}
+            {isSpinModalOpen && (
+                <DailySpinModal
+                    onClose={() => setIsSpinModalOpen(false)}
+                    onWin={handleSpinWin}
                 />
             )}
 

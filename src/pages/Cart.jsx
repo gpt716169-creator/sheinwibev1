@@ -184,6 +184,69 @@ export default function Cart() {
         });
     };
 
+    const handleSelectAll = () => {
+        if (selectedIds.length === items.length) {
+            setSelectedIds([]); // Снять все
+        } else {
+            setSelectedIds(items.map(i => i.id)); // Выбрать все
+        }
+    };
+
+    const handleBulkDelete = async () => {
+        if (selectedIds.length === 0) return;
+        if (!window.confirm(`Удалить выбранные товары (${selectedIds.length})?`)) return;
+
+        // Оптимистичное удаление из UI
+        const idsToDelete = [...selectedIds];
+        setItems(prev => prev.filter(i => !idsToDelete.includes(i.id)));
+        setSelectedIds([]);
+
+        // Запрос к API
+        try {
+            await Promise.all(idsToDelete.map(id =>
+                fetch(`${API_BASE_URL}/delete-item`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ id, tg_id: user?.id })
+                })
+            ));
+            window.Telegram?.WebApp?.HapticFeedback.notificationOccurred('success');
+        } catch (e) {
+            console.error("Ошибка массового удаления:", e);
+            // В идеале перезагрузить корзину
+            loadCart();
+        }
+    };
+
+    const handleShareWishlist = () => {
+        const selectedItems = items.filter(i => selectedIds.includes(i.id));
+        if (selectedItems.length === 0) {
+            window.Telegram?.WebApp?.showAlert('Выберите товары, которыми хотите поделиться!');
+            return;
+        }
+
+        const total = selectedItems.reduce((sum, i) => sum + (i.final_price_rub * i.quantity), 0);
+
+        let message = `🎁 *Мой вишлист в Sheinwibe*\n\n`;
+        message += `Я выбрала классные вещи и намекаю... 😉\n\n`;
+
+        selectedItems.forEach((item, index) => {
+            message += `${index + 1}. ${item.item_name} — ${item.final_price_rub}₽\n`;
+        });
+
+        message += `\n💰 *Итого: ${total} ₽*\n\n`;
+        message += `Оплатишь? 😘\n`;
+        message += `https://t.me/SheinWibeTestBot/app`; // Ссылка на бот
+
+        const url = `https://t.me/share/url?url=${encodeURIComponent(' ')}&text=${encodeURIComponent(message)}`;
+
+        if (window.Telegram?.WebApp?.openTelegramLink) {
+            window.Telegram.WebApp.openTelegramLink(url);
+        } else {
+            window.open(url, '_blank');
+        }
+    };
+
     const handleManageAddresses = () => {
         sessionStorage.setItem('open_profile_tab', 'addresses');
         navigate(ROUTES.PROFILE);
@@ -396,7 +459,18 @@ export default function Cart() {
 
     return (
         <div className="flex flex-col min-h-screen bg-transparent animate-fade-in pb-32">
-            <div className="p-6 pt-8 pb-4"><h1 className="text-white text-lg font-medium">Корзина ({items.length})</h1></div>
+            <div className="p-6 pt-8 pb-4 flex justify-between items-end">
+                <div>
+                    <h1 className="text-white text-lg font-medium flex items-center gap-2">
+                        Корзина
+                        <span className="text-xl">🎄</span>
+                    </h1>
+                    <p className="text-white/50 text-xs">Новогодняя распродажа</p>
+                </div>
+                <div className="text-white/50 text-sm">
+                    {items.length} тов.
+                </div>
+            </div>
 
             {loading ? (
                 <div className="text-center text-white/50 mt-10">Загрузка...</div>
@@ -407,6 +481,38 @@ export default function Cart() {
                 </div>
             ) : (
                 <div className="px-6 space-y-4">
+                    {/* TOOLS BAR */}
+                    <div className="flex items-center justify-between bg-white/5 p-3 rounded-xl border border-white/5">
+                        <div
+                            onClick={handleSelectAll}
+                            className="flex items-center gap-2 cursor-pointer opacity-70 hover:opacity-100"
+                        >
+                            <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors ${selectedIds.length === items.length && items.length > 0 ? 'border-primary bg-primary text-black' : 'border-white/30'}`}>
+                                {selectedIds.length === items.length && items.length > 0 && <span className="material-symbols-outlined text-sm font-bold">check</span>}
+                            </div>
+                            <span className="text-xs font-bold text-white">Все</span>
+                        </div>
+
+                        <div className="flex items-center gap-3">
+                            {selectedIds.length > 0 && (
+                                <>
+                                    <button
+                                        onClick={handleShareWishlist}
+                                        className="w-8 h-8 rounded-full bg-pink-500/20 text-pink-400 flex items-center justify-center active:scale-95 transition-transform"
+                                    >
+                                        <span className="material-symbols-outlined text-lg">favorite</span>
+                                    </button>
+                                    <button
+                                        onClick={handleBulkDelete}
+                                        className="w-8 h-8 rounded-full bg-red-500/20 text-red-500 flex items-center justify-center active:scale-95 transition-transform"
+                                    >
+                                        <span className="material-symbols-outlined text-lg">delete</span>
+                                    </button>
+                                </>
+                            )}
+                        </div>
+                    </div>
+
                     <div className="space-y-3">
                         {items.map(item => (
                             <CartItem

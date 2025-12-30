@@ -7,6 +7,7 @@ import Profile from './pages/Profile';
 import SuccessPage from './pages/SuccessPage';
 import Resale from './pages/Resale'; // <-- NEW
 import { ROUTES } from './config/constants';
+import SnowEffect from './components/ui/SnowEffect';
 
 function App() {
   const navigate = useNavigate();
@@ -44,6 +45,9 @@ function App() {
   return (
     <div className="min-h-screen bg-luxury-gradient text-white overflow-hidden font-display">
       <div className="fixed inset-0 pointer-events-none bg-luxury-gradient z-0"></div>
+
+      {/* Снег на фоне */}
+      <SnowEffect />
 
       <div className="relative z-10 pb-24">
         <Routes>

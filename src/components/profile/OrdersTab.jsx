@@ -3,24 +3,24 @@ import React from 'react';
 export default function OrdersTab({ orders = [], onSelectOrder }) {
 
   const formatDate = (dateString) => {
-      if (!dateString) return '';
-      return new Date(dateString).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' });
+    if (!dateString) return '';
+    return new Date(dateString).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' });
   };
 
   const getOrderStatus = (order) => {
     // 1. ФИНАЛЬНЫЕ СТАТУСЫ
     if (order.status === 'cancelled') return { text: 'Отменен', color: 'text-red-500 bg-red-500/10' };
     if (order.status === 'completed') return { text: 'Доставлен', color: 'text-green-500 bg-green-500/10' };
-    
+
     // 2. ОЖИДАНИЕ ОПЛАТЫ
     if (order.status === 'waiting_for_pay') {
-        return { text: 'Ожидает оплаты', color: 'text-orange-400 bg-orange-400/10 border border-orange-400/20' };
+      return { text: 'Ожидает оплаты', color: 'text-orange-400 bg-orange-400/10 border border-orange-400/20' };
     }
 
     // 3. СТАТУСЫ ИЗ ТРЕКИНГА
     if (order.tracking_history && Array.isArray(order.tracking_history) && order.tracking_history.length > 0) {
-       const sorted = [...order.tracking_history].sort((a, b) => new Date(b.date) - new Date(a.date));
-       return { text: sorted[0].status, color: 'text-primary bg-primary/10' };
+      const sorted = [...order.tracking_history].sort((a, b) => new Date(b.date) - new Date(a.date));
+      return { text: sorted[0].status, color: 'text-primary bg-primary/10' };
     }
 
     // 4. ВИРТУАЛЬНЫЕ СТАТУСЫ
@@ -37,61 +37,98 @@ export default function OrdersTab({ orders = [], onSelectOrder }) {
     return { text: 'Оформлен', color: 'text-white/70 bg-white/10' };
   };
 
+  // --- DEMO ORDER ---
+  const addDemoOrder = () => {
+    const demoOrder = {
+      id: 'DEMO-' + Date.now(),
+      order_number: 'DEMO-123',
+      created_at: new Date().toISOString(),
+      status: 'sent_to_russia', // Статус, когда посылка уже в пути (можно распаковать)
+      total_amount: 15990,
+      delivery_address: 'Москва г, Красная площадь, д. 1',
+      order_items: [
+        {
+          product_name: '[DEMO] Платье вечернее с пайетками',
+          quantity: 1,
+          final_price_rub: 15990,
+          size: 'S',
+          color: 'Gold',
+          image_url: 'https://img.ltwebstatic.com/images3_pi/2023/12/11/4c/170227572793288c304245607063d9171b31526732_thumbnail_600x.webp'
+        }
+      ]
+    };
+    // Мы не можем мутировать пропсы напрямую, но мы можем вызвать хак или 
+    // просто сказать пользователю, что это фронтенд-мок.
+    // HACK: Добавляем в локальный список onSelect
+    onSelectOrder(demoOrder);
+    window.Telegram?.WebApp?.HapticFeedback.notificationOccurred('success');
+  };
+
+  if (loading) {
+    return <div className="p-10 text-center opacity-50"><span className="loader">Загрузка...</span></div>;
+  }
+
   // ЕСЛИ ПУСТО
   if (!orders || orders.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center py-20 text-white/30">
+      <div className="flex flex-col items-center justify-center py-20 opacity-60">
         <span className="material-symbols-outlined text-4xl mb-2">shopping_bag</span>
-        <p>История заказов пуста</p>
+        <p className="text-sm">Пока нет заказов</p>
+        <button onClick={addDemoOrder} className="mt-4 text-xs text-primary underline">
+          Создать тестовый заказ (Demo)
+        </button>
       </div>
     );
   }
 
   // РЕНДЕР СПИСКА
   return (
-    <div className="space-y-3 pb-24">
+    <div className="px-6 py-4 space-y-3 pb-32">
+      <button onClick={addDemoOrder} className="w-full text-center text-[10px] text-white/20 mb-2 uppercase tracking-widest border border-dashed border-white/10 rounded p-2 hover:text-white hover:border-white/30 transition-all">
+        + Создать тестовый "Отправленный" заказ
+      </button>
       {orders.map((order) => {
         const status = getOrderStatus(order);
-        
+
         // Форматирование номера: SHEIN B-124 или #F47AC...
-        const displayId = order.order_number 
-            ? `SHEIN B-${order.order_number}` 
-            : `#${order.id.slice(0, 8).toUpperCase()}`;
+        const displayId = order.order_number
+          ? `SHEIN B-${order.order_number}`
+          : `#${order.id.slice(0, 8).toUpperCase()}`;
 
         return (
-            <div 
-              key={order.id} 
-              onClick={() => onSelectOrder(order)} 
-              className="bg-[#151c28] border border-white/5 rounded-2xl p-4 active:scale-[0.98] transition-all cursor-pointer"
-            >
-              <div className="flex justify-between items-start mb-3">
-                <div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-white font-bold text-sm">{displayId}</span>
-                    <span className={`text-[10px] px-2 py-0.5 rounded font-medium ${status.color}`}>
-                        {status.text}
-                    </span>
-                  </div>
-                  <p className="text-white/40 text-xs mt-0.5">{formatDate(order.created_at)}</p>
+          <div
+            key={order.id}
+            onClick={() => onSelectOrder(order)}
+            className="bg-[#151c28] border border-white/5 rounded-2xl p-4 active:scale-[0.98] transition-all cursor-pointer"
+          >
+            <div className="flex justify-between items-start mb-3">
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="text-white font-bold text-sm">{displayId}</span>
+                  <span className={`text-[10px] px-2 py-0.5 rounded font-medium ${status.color}`}>
+                    {status.text}
+                  </span>
                 </div>
-                <span className="text-white font-bold">{Math.floor(order.total_amount).toLocaleString()} ₽</span>
+                <p className="text-white/40 text-xs mt-0.5">{formatDate(order.created_at)}</p>
               </div>
-
-              <div className="flex gap-2 overflow-hidden">
-                {(order.order_items || []).slice(0, 4).map((item, idx) => (
-                   <div key={idx} className="w-12 h-14 bg-[#1a2333] rounded-lg bg-cover bg-center border border-white/5 shrink-0 relative" style={{backgroundImage: `url('${item.image_url}')`}}>
-                      {item.quantity > 1 && (
-                          <div className="absolute bottom-0 right-0 bg-black/60 text-[8px] text-white px-1 rounded-tl">x{item.quantity}</div>
-                      )}
-                   </div>
-                ))}
-                {(order.order_items || []).length > 4 && (
-                   <div className="w-12 h-14 bg-[#1a2333] rounded-lg border border-white/5 flex items-center justify-center text-white/30 text-xs font-bold shrink-0">
-                      +{order.order_items.length - 4}
-                   </div>
-                )}
-              </div>
+              <span className="text-white font-bold">{Math.floor(order.total_amount).toLocaleString()} ₽</span>
             </div>
+
+            <div className="flex gap-2 overflow-hidden">
+              {(order.order_items || []).slice(0, 4).map((item, idx) => (
+                <div key={idx} className="w-12 h-14 bg-[#1a2333] rounded-lg bg-cover bg-center border border-white/5 shrink-0 relative" style={{ backgroundImage: `url('${item.image_url}')` }}>
+                  {item.quantity > 1 && (
+                    <div className="absolute bottom-0 right-0 bg-black/60 text-[8px] text-white px-1 rounded-tl">x{item.quantity}</div>
+                  )}
+                </div>
+              ))}
+              {(order.order_items || []).length > 4 && (
+                <div className="w-12 h-14 bg-[#1a2333] rounded-lg border border-white/5 flex items-center justify-center text-white/30 text-xs font-bold shrink-0">
+                  +{order.order_items.length - 4}
+                </div>
+              )}
+            </div>
+          </div>
         );
       })}
     </div>

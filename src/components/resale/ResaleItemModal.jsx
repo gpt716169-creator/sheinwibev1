@@ -48,7 +48,9 @@ export default function ResaleItemModal({ item, onClose }) {
                 <div className="flex justify-between items-start mb-4">
                     <h1 className="text-xl font-bold text-white flex-1 mr-4">{item.title}</h1>
                     <div className="flex flex-col items-end">
-                        <span className="text-2xl font-black text-primary">{item.price} ₽</span>
+                        <span className={`text-2xl font-black ${item.currency === 'WIBE' ? 'text-purple-400' : 'text-primary'}`}>
+                            {item.price} {item.currency === 'WIBE' ? 'Wibe' : '₽'}
+                        </span>
                         <span className="text-sm text-white/40 line-through decoration-white/30">{item.original_price} ₽</span>
                     </div>
                 </div>
@@ -81,13 +83,57 @@ export default function ResaleItemModal({ item, onClose }) {
 
                 {/* Footer Action */}
                 <div className="pb-safe-bottom py-4 border-t border-white/5">
-                    <button
-                        onClick={handleContactSeller}
-                        className="w-full h-14 bg-white text-[#102216] font-black rounded-xl text-lg uppercase shadow-[0_0_20px_rgba(255,255,255,0.2)] active:scale-95 transition-transform flex items-center justify-center gap-2"
-                    >
-                        <span className="material-symbols-outlined">chat</span>
-                        Написать продавцу
-                    </button>
+                    {item.is_auction ? (
+                        <div className="space-y-3">
+                            {/* Timer & Bid Info */}
+                            <div className="flex justify-between items-center bg-[#1c2636] p-3 rounded-xl border border-white/5">
+                                <div>
+                                    <p className="text-[10px] text-white/40 uppercase font-bold">До конца аукциона</p>
+                                    <p className="text-white font-mono font-bold text-lg animate-pulse">02:59:12</p>
+                                </div>
+                                <div className="text-right">
+                                    <p className="text-[10px] text-white/40 uppercase font-bold">Ставок</p>
+                                    <p className="text-white font-bold">{item.bids_count || 0}</p>
+                                </div>
+                            </div>
+
+                            <button
+                                onClick={() => {
+                                    window.Telegram?.WebApp?.showConfirm(`Сделать ставку ${item.price * 1.1} ₽? (Это только тест)`, (ok) => {
+                                        if (ok) window.Telegram?.WebApp?.showAlert('Ставка принята! (Визуально)');
+                                    });
+                                }}
+                                className="w-full h-14 bg-orange-500 text-black font-black rounded-xl text-lg uppercase shadow-[0_0_20px_rgba(249,115,22,0.4)] active:scale-95 transition-transform flex items-center justify-center gap-2"
+                            >
+                                <span className="material-symbols-outlined">gavel</span>
+                                Сделать ставку
+                            </button>
+                            <p className="text-center text-[10px] text-white/30">Минимальный шаг: 10%</p>
+                        </div>
+                    ) : item.currency === 'WIBE' ? (
+                        <div className="space-y-3">
+                            <button
+                                onClick={() => {
+                                    window.Telegram?.WebApp?.showConfirm(`Купить этот товар за ${item.price} баллов Wibe?`, (ok) => {
+                                        if (ok) window.Telegram?.WebApp?.showAlert('Запрос отправлен продавцу! (В разработке)');
+                                    });
+                                }}
+                                className="w-full h-14 bg-purple-600 text-white font-black rounded-xl text-lg uppercase shadow-[0_0_20px_rgba(147,51,234,0.4)] active:scale-95 transition-transform flex items-center justify-center gap-2"
+                            >
+                                <span className="material-symbols-outlined">loyalty</span>
+                                Купить за {item.price} Wibe
+                            </button>
+                            <p className="text-center text-[10px] text-white/30">Спишется с вашего баланса</p>
+                        </div>
+                    ) : (
+                        <button
+                            onClick={handleContactSeller}
+                            className="w-full h-14 bg-white text-[#102216] font-black rounded-xl text-lg uppercase shadow-[0_0_20px_rgba(255,255,255,0.2)] active:scale-95 transition-transform flex items-center justify-center gap-2"
+                        >
+                            <span className="material-symbols-outlined">chat</span>
+                            Написать продавцу
+                        </button>
+                    )}
                 </div>
             </div>
         </div>,

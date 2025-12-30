@@ -1,6 +1,7 @@
 import React, { useMemo, useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { API_BASE_URL } from '../../config/constants';
+import UnboxingAnimation from './UnboxingAnimation';
 
 export default function OrderDetailsModal({ order, onClose }) {
     if (!order) return null;
@@ -129,18 +130,39 @@ export default function OrderDetailsModal({ order, onClose }) {
         return new Date(dateString).toLocaleDateString('ru-RU', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
     };
 
+    // --- ANIMATION STATE ---
+    const [showUnboxing, setShowUnboxing] = useState(false);
+
+    const isShipped = order.status === 'sent_to_russia' || order.status === 'arrived_at_warehouse' || order.status === 'shipped';
+
     return createPortal(
         <div className="fixed inset-0 z-[99999] flex items-center justify-center p-4" style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0 }}>
+            {showUnboxing && <UnboxingAnimation onClose={() => setShowUnboxing(false)} />}
+
             <div className="absolute inset-0 bg-black/80 backdrop-blur-sm animate-fade-in" onClick={handleClose}></div>
             <div className="relative z-10 bg-[#151c28] w-full max-w-sm rounded-2xl border border-white/10 shadow-2xl flex flex-col max-h-[85vh] overflow-hidden animate-scale-in" onClick={e => e.stopPropagation()}>
 
                 {/* HEADER */}
                 <div className="p-4 border-b border-white/5 flex justify-between items-center bg-[#1a2333]">
-                    <div>
-                        {/* ЗДЕСЬ ТЕПЕРЬ displayId */}
-                        <h2 className="font-bold text-white text-sm">{displayId}</h2>
-                        <p className="text-[10px] text-white/40">{formatDate(order.created_at)}</p>
+                    <div className="flex items-center gap-3">
+                        <div>
+                            {/* ЗДЕСЬ ТЕПЕРЬ displayId */}
+                            <h2 className="font-bold text-white text-sm">{displayId}</h2>
+                            <p className="text-[10px] text-white/40">{formatDate(order.created_at)}</p>
+                        </div>
+
+                        {/* Interactive Packaging Button */}
+                        {isShipped && (
+                            <button
+                                onClick={() => setShowUnboxing(true)}
+                                className="w-8 h-8 rounded-full bg-[#d4a373] text-[#5e4026] flex items-center justify-center animate-pulse shadow-lg active:scale-90"
+                                title="Распаковать"
+                            >
+                                <span className="material-symbols-outlined text-lg">package_2</span>
+                            </button>
+                        )}
                     </div>
+
                     <button onClick={handleClose} className="w-8 h-8 rounded-full bg-white/5 text-white flex items-center justify-center hover:bg-white/10 active:scale-95 transition-all">
                         <span className="material-symbols-outlined text-lg">close</span>
                     </button>
