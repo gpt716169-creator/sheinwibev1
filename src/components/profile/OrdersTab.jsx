@@ -64,9 +64,7 @@ export default function OrdersTab({ orders = [], onSelectOrder }) {
     window.Telegram?.WebApp?.HapticFeedback.notificationOccurred('success');
   };
 
-  if (loading) {
-    return <div className="p-10 text-center opacity-50"><span className="loader">Загрузка...</span></div>;
-  }
+
 
   // ЕСЛИ ПУСТО
   if (!orders || orders.length === 0) {
@@ -93,7 +91,7 @@ export default function OrdersTab({ orders = [], onSelectOrder }) {
         // Форматирование номера: SHEIN B-124 или #F47AC...
         const displayId = order.order_number
           ? `SHEIN B-${order.order_number}`
-          : `#${order.id.slice(0, 8).toUpperCase()}`;
+          : `#${(order.id || '').toString().slice(0, 8).toUpperCase()}`;
 
         return (
           <div

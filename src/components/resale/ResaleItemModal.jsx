@@ -42,7 +42,7 @@ export default function ResaleItemModal({ item, onClose }) {
             </div>
 
             {/* Content */}
-            <div className="flex-1 -mt-10 relative z-10 px-6 flex flex-col h-full bg-[#101622] rounded-t-3xl border-t border-white/5">
+            <div className="flex-1 -mt-10 relative z-10 px-6 flex flex-col bg-[#101622] rounded-t-3xl border-t border-white/5 overflow-hidden">
                 <div className="w-12 h-1 bg-white/10 rounded-full mx-auto mt-3 mb-6"></div>
 
                 <div className="flex justify-between items-start mb-4">
@@ -65,8 +65,8 @@ export default function ResaleItemModal({ item, onClose }) {
                     </span>
                 </div>
 
-                {/* Description */}
-                <div className="space-y-4 overflow-y-auto mb-6 flex-1 pr-2">
+                {/* Description - Scrollable Area */}
+                <div className="flex-1 overflow-y-auto min-h-0 space-y-4 mb-4 pr-2 custom-scrollbar">
                     <div>
                         <h3 className="text-white/40 text-[10px] uppercase font-bold mb-2">Описание</h3>
                         <p className="text-white/80 text-sm leading-relaxed">{item.description}</p>

@@ -13,7 +13,7 @@ export default function OrderDetailsModal({ order, onClose }) {
     // Если нет -> #F47AC10B
     const displayId = order.order_number
         ? `SHEIN B-${order.order_number}`
-        : `#${order.id.slice(0, 8).toUpperCase()}`;
+        : `#${(order.id || '').toString().slice(0, 8).toUpperCase()}`;
 
     // --- БЛОКИРОВКА СКРОЛЛА ---
     const unlockScroll = () => {

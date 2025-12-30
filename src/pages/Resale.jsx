@@ -167,7 +167,6 @@ export default function Resale() {
                             <h3 className="text-white text-xs font-medium line-clamp-2 min-h-[2.5em]">{item.title}</h3>
                             <div className="flex justify-between items-center mt-2">
                                 <span className="text-white/40 text-[10px] bg-white/5 px-1.5 py-0.5 rounded border border-white/5">{item.size}</span>
-                                <span className="text-white/30 text-[10px]">Покупали за {item.original_price}</span>
                             </div>
                         </div>
                     </div>
